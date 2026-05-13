@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+*.skill
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
