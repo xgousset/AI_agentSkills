@@ -23,4 +23,5 @@ Guiding users through medical emergencies in a radioactive environment.
 
 ## Medical Reference
 
-See [references/medical.md](references/medical.md) for detailed clinical information.
+- **Comprehensive Protocols**: [references/protocols_medical.md](references/protocols_medical.md)
+- **Clinical Information**: [references/medical.md](references/medical.md)

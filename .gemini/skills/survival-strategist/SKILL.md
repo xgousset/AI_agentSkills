@@ -17,9 +17,15 @@ Empowers the agent to guide users through life-saving decisions in a nuclear cri
     - **Shelter-in-Place**: If blast is imminent or fallout is arriving.
     - **Evacuate**: If there is time to move out of the predicted fallout path.
 3.  **Provide Instructions**:
+    - **Find Shelters**: Use `scripts/find_shelters.py` to query Overpass API for `amenity=shelter`.
     - Specific evacuation routes (cross-wind).
     - Shelter types (underground, concrete buildings).
     - Necessary supplies (water, food, radio).
+
+## Data Sources
+
+- **Overpass API**: Live query for bomb and nuclear shelters.
+- **Scripts**: `scripts/find_shelters.py` fetches local shelter data.
 
 ## Resources
 

@@ -9,7 +9,9 @@ Determines the vulnerability of a location to a nuclear strike.
 
 ## Workflow
 
-1.  **Identify Targets**: Cross-reference user location with known strategic sites.
+1.  **Identify Targets**: 
+    - Use `scripts/query_targets.py` to fetch real-time data on military bases and nuclear plants from Overpass API.
+    - Cross-reference with [references/targets.md](references/targets.md).
 2.  **Calculate Distance**: Use the Great Circle distance to nearest targets.
 3.  **Score Risk**:
     - **Critical**: < 10km from a high-priority target (Counter-force).
@@ -17,6 +19,11 @@ Determines the vulnerability of a location to a nuclear strike.
     - **Moderate**: 30-70km from a target.
     - **Low**: > 70km from any major strategic site.
 4.  **Consider Secondary Risks**: EMP impact on infrastructure, power grid failure.
+
+## Data Sources
+
+- **Overpass API (OpenStreetMap)**: Live queries for `military=base` and `power=plant`.
+- **Scripts**: `scripts/query_targets.py` handles API interaction.
 
 ## Target Reference
 

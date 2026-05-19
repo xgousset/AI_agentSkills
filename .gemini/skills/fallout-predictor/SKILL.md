@@ -12,7 +12,7 @@ Use this skill to calculate and visualize potential radioactive fallout patterns
 1.  **Gather Data**:
     - Detonation location (coordinates or city).
     - Yield (in kilotons/megatons) - default to 150kt if unknown.
-    - Wind speed and direction at different altitudes (surface, 5000m, 10000m).
+    - **Wind Data**: Use `scripts/get_weather.py` to fetch current wind speed and direction at different altitudes via **Open-Meteo API**.
 2.  **Analyze**:
     - Determine the 'Hotline' (center of the fallout plume).
     - Estimate the width and length of the plume based on yield and wind speed.
@@ -20,6 +20,11 @@ Use this skill to calculate and visualize potential radioactive fallout patterns
 3.  **Advise**:
     - Provide immediate sheltering instructions for areas in the predicted path.
     - Estimate 'Time of Arrival' (TOA) for different locations.
+
+## Data Sources
+
+- **Open-Meteo API**: Free, real-time atmospheric data (wind at various altitudes).
+- **Scripts**: `scripts/get_weather.py` automates data collection.
 
 ## Reference Material
 
