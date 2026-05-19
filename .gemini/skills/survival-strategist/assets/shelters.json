@@ -1,0 +1,9 @@
+[
+  {
+    "id": "shelter-001",
+    "name": "Public Shelter A",
+    "coordinates": [48.8566, 2.3522],
+    "capacity": 500,
+    "type": "Underground Metro Station"
+  }
+]
