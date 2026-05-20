@@ -4,6 +4,8 @@ import os
 import tempfile
 import time
 
+import tempfile
+
 CACHE_FILE = os.path.join(tempfile.gettempdir(), "teleray_sensor_cache.json")
 CACHE_EXPIRY = 600 # 10 minutes (matching Teleray update frequency)
 

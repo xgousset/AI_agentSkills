@@ -4,6 +4,8 @@ import os
 import tempfile
 import time
 
+import tempfile
+
 CACHE_FILE = os.path.join(tempfile.gettempdir(), "fallout_weather_cache.json")
 CACHE_EXPIRY = 900 # 15 minutes
 
