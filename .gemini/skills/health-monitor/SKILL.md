@@ -10,3 +10,9 @@ Tracks public health trends, water quality, and the spread of disease in post-ev
 ## Resources
 - `references/sanitation_protocols.md`: Emergency hygiene and waste disposal.
 - `scripts/track_outbreaks.py`: Scrapes verified health feeds for disease clusters.
+
+## Data Sources
+- **Sentiweb (Epidemiology)**: https://www.sentiweb.fr/
+- **GEODES (Public Health)**: https://geodes.santepubliquefrance.fr/
+- **Hub'Eau (Water Quality)**: https://hubeau.eaufrance.fr/
+- **Géodair (Air Quality)**: https://www.geodair.fr/

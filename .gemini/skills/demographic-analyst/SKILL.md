@@ -10,3 +10,6 @@ Assesses population density and identifies vulnerable groups requiring prioritiz
 ## Resources
 - `assets/pop_vulnerability.csv`: Regional data on specialized care facilities.
 - `scripts/analyze_density.py`: Correlates population data with blast radii.
+
+## Data Sources
+- **INSEE (Population & Stats)**: https://www.insee.fr/fr/statistiques/3568638, https://api.insee.fr/, https://statistiques-locales.insee.fr/

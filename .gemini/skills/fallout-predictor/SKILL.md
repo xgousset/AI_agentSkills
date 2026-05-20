@@ -23,6 +23,7 @@ Use this skill to calculate and visualize potential radioactive fallout patterns
 
 ## Data Sources
 
+- **Météo-France**: https://portail-api.meteofrance.fr/ (Official national forecasting).
 - **Open-Meteo API**: Free, real-time atmospheric data (wind at various altitudes).
 - **Scripts**: `scripts/get_weather.py` automates data collection.
 

@@ -24,6 +24,8 @@ Determines the vulnerability of a location to a nuclear strike.
 ## Data Sources
 
 - **Overpass API (OpenStreetMap)**: Live queries for `military=base` and `power=plant`.
+- **Géorisques**: https://www.georisques.gouv.fr/ (Natural and technological risks).
+- **Vigicrues**: https://vigicrues.gouv.fr/ (Flood and river monitoring).
 - **Scripts**:
   - `scripts/query_targets.py` — online path via Overpass.
   - `scripts/local_risk_check.py` — offline fallback over the bundled CSV.

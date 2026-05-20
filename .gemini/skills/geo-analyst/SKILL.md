@@ -10,3 +10,9 @@ Analyzes geographic features and infrastructure accessibility to identify bottle
 ## Resources
 - `assets/transit_nodes.json`: Database of key bridges and tunnels.
 - `scripts/map_barriers.py`: Analyzes OSM data for transit interruptions.
+
+## Data Sources
+- **IGN Géoplateforme (Data.geopf)**: https://data.geopf.fr/ (Authoritative French geographic data).
+- **Panoramax**: https://panoramax.fr/ (Street-level imagery).
+- **API Adresse**: https://api-adresse.data.gouv.fr/
+- **API Géo**: https://geo.api.gouv.fr/

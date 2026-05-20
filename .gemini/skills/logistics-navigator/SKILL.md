@@ -11,6 +11,7 @@ Optimizes evacuation routing to avoid radioactive fallout and high-risk zones.
 
 ## Data Sources
 
+- **Bison Futé**: https://www.bison-fute.gouv.fr/ (Real-time traffic and road closures).
 - **OpenStreetMap**: For routing and bridge data.
 - **Fallout Predictor**: For dynamic plume data.
 
