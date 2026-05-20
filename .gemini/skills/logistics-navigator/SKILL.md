@@ -1,3 +1,8 @@
+---
+name: logistics-navigator
+description: Optimizes evacuation routing to avoid radioactive fallout, fire zones, and bottlenecks; computes Safe-Exit vectors perpendicular to the plume. Use when the user asks for an evacuation route, safe-exit path, turn-by-turn directions out of a danger zone, or how to drive away from the fallout.
+---
+
 # Logistics Navigator
 
 Optimizes evacuation routing to avoid radioactive fallout and high-risk zones.

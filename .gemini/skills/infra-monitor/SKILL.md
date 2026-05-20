@@ -1,3 +1,8 @@
+---
+name: infra-monitor
+description: Maps and assesses critical infrastructure (water towers, power substations, gas hubs, telecom towers) during and after a nuclear event. Use when the user asks about utilities, power outages, water pumps, manual shut-off procedures, or which critical infrastructure is still operational.
+---
+
 # Infrastructure Monitor
 
 Assists in mapping and assessing the status of critical infrastructure during and after a nuclear event.

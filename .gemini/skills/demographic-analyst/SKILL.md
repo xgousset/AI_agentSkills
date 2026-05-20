@@ -1,3 +1,8 @@
+---
+name: demographic-analyst
+description: Assesses population density and identifies vulnerable groups (hospitals, schools, nursing homes) requiring prioritized assistance. Use when the user asks about population density, crowding risk, evacuation priorities, vulnerable people (elderly, children, disabled), or pediatric/geriatric supply demand.
+---
+
 # Demographic Risk Analyst
 
 Assesses population density and identifies vulnerable groups requiring prioritized assistance.

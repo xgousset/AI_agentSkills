@@ -1,3 +1,8 @@
+---
+name: pdf-generator
+description: Synthesizes technical emergency data into a portable, offline-ready PDF brief by aggregating outputs from fallout-predictor, risk-analyst, logistics-navigator, and psych-counselor, and embedding maps from data-visualizer. Use when the user asks for a printable report, a downloadable PDF, an offline brief, or a document to share without internet.
+---
+
 # PDF Report Generator
 
 Synthesizes technical emergency data into a portable, offline-ready PDF document.

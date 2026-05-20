@@ -1,3 +1,8 @@
+---
+name: data-visualizer
+description: Transforms complex spatial and technical data into clear visual representations (fallout heatmaps, blast-radius overlays, supply dashboards). Use when the user asks to plot, visualize, render a map, generate a chart, or produce graphical output from emergency data.
+---
+
 # Survival Data Visualizer
 
 Transforms complex spatial and technical data into clear, actionable visual representations.
