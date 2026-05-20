@@ -5,7 +5,7 @@ def get_strategic_sites(lat, lon, radius_km=50):
     """
     Queries Overpass API for military bases and nuclear power plants near a location.
     """
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = "https://overpass-api.de/api/interpreter"
     
     # Radius in meters for Overpass
     radius = radius_km * 1000

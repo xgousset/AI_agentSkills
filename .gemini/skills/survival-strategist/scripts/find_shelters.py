@@ -5,7 +5,7 @@ def get_shelters(lat, lon, radius_km=20):
     """
     Queries Overpass API for public shelters near a location.
     """
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = "https://overpass-api.de/api/interpreter"
     radius = radius_km * 1000
     
     query = f"""
