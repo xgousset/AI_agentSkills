@@ -1,6 +1,6 @@
 ---
 name: emergency-briefer
-description: Synthesizes complex technical data into concise, readable, and actionable emergency briefs.
+description: Synthesizes complex technical data into concise, readable, and actionable emergency briefs. Use when the user asks for a brief, summary, tl;dr, status update, or "what should I do right now"; also invoked by other skills as the final delivery step.
 ---
 
 # Emergency Briefer
@@ -16,6 +16,10 @@ This skill ensures that critical information is delivered effectively under high
     - **Flash Brief**: < 50 words for immediate action.
     - **Standard Brief**: Structured summary with prioritized checklists.
     - **Technical Addendum**: For deep-dive data (hidden by default).
+5.  **Render**: Pass the synthesized payload through `scripts/format_brief.py` with the selected mode (`flash` | `standard` | `technical`) to produce the final markdown output.
+
+## Scripts
+- `scripts/format_brief.py` — turns a structured emergency-data dict (status, primary_action, top_3_actions, threat_details, ...) into the chosen brief format.
 
 ## Style Principles
 

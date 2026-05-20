@@ -9,8 +9,9 @@ Determines the vulnerability of a location to a nuclear strike.
 
 ## Workflow
 
-1.  **Identify Targets**: 
-    - Use `scripts/query_targets.py` to fetch real-time data on military bases and nuclear plants from Overpass API.
+1.  **Identify Targets**:
+    - **Online (preferred)**: Use `scripts/query_targets.py` to fetch real-time data on military bases and nuclear plants from Overpass API.
+    - **Offline fallback**: If Overpass is unreachable (timeout, 5xx), use `scripts/local_risk_check.py`, which reads [`assets/nuclear_plants.csv`](assets/nuclear_plants.csv) (GPPD-format global database of nuclear power plants) and returns the closest plants by Haversine distance.
     - Cross-reference with [references/targets.md](references/targets.md).
 2.  **Calculate Distance**: Use the Great Circle distance to nearest targets.
 3.  **Score Risk**:
@@ -23,8 +24,11 @@ Determines the vulnerability of a location to a nuclear strike.
 ## Data Sources
 
 - **Overpass API (OpenStreetMap)**: Live queries for `military=base` and `power=plant`.
-- **Scripts**: `scripts/query_targets.py` handles API interaction.
+- **Scripts**:
+  - `scripts/query_targets.py` — online path via Overpass.
+  - `scripts/local_risk_check.py` — offline fallback over the bundled CSV.
 
-## Target Reference
+## Resources
 
-See [references/targets.md](references/targets.md) for target categorization.
+- **Target categorization**: [references/targets.md](references/targets.md)
+- **Offline plant database**: [assets/nuclear_plants.csv](assets/nuclear_plants.csv) — GPPD v1.3 schema (country_code, country, name, gppd_id, capacity_mw, latitude, longitude, ...).

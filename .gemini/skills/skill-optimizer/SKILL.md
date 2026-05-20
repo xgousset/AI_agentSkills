@@ -1,6 +1,6 @@
 ---
 name: skill-optimizer
-description: Reviews existing skills to propose technical improvements, better data sources, or more efficient workflows.
+description: Reviews existing skills to propose technical improvements, better data sources, or more efficient workflows. Use when the user asks to audit, optimize, improve, refactor, or upgrade an existing skill in this catalog.
 ---
 
 # Skill Optimizer

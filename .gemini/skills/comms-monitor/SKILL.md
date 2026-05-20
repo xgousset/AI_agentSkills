@@ -1,6 +1,6 @@
 ---
 name: comms-monitor
-description: Monitors emergency frequencies, government alerts, and verified news feeds.
+description: Monitors emergency frequencies, government alerts, and verified news feeds. Use when the user asks for the latest alerts, official broadcasts, news updates, or wants to verify a rumor against authoritative sources.
 ---
 
 # Comms Monitor

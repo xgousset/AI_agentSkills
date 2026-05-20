@@ -1,6 +1,6 @@
 ---
 name: strike-predictor
-description: Predicts potential subsequent targets based on strike patterns, geopolitical importance, and military doctrine.
+description: Predicts potential subsequent targets based on strike patterns, geopolitical importance, and military doctrine. Use when the user asks what is next, where the next strike might land, how the conflict could escalate, or to anticipate counter-force vs counter-value targeting near a given location.
 ---
 
 # Strike Predictor

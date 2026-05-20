@@ -1,6 +1,6 @@
 ---
 name: location-provider
-description: Retrieves the user's current geographic location based on IP address or system data. Essential for providing localized emergency guidance.
+description: Retrieves the user's current geographic location based on IP address or system data. Essential for providing localized emergency guidance. Use when any other skill needs the user's coordinates (lat/lon) or when the user asks where they are, what city they are in, or to confirm their location.
 ---
 
 # Location Provider
