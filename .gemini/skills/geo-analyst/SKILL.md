@@ -1,3 +1,8 @@
+---
+name: geo-analyst
+description: Analyzes terrain features (rivers, mountains) and transit infrastructure (bridges, tunnels, walled areas) to find bottlenecks and accessible safe zones. Use when the user asks about routes, terrain obstacles, bridges/tunnels status, or accessibility for mobility-impaired individuals.
+---
+
 # Geo-Accessibility Analyst
 
 Analyzes geographic features and infrastructure accessibility to identify bottlenecks and safe zones.

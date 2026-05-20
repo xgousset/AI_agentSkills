@@ -7,7 +7,7 @@ def get_location():
     Uses multiple fallback services.
     """
     services = [
-        {"url": "http://ip-api.com/json/", "parser": lambda d: {
+        {"url": "https://ip-api.com/json/", "parser": lambda d: {
             "lat": d.get('lat'), "lon": d.get('lon'), "city": d.get('city'), "status": d.get('status') == 'success'
         }},
         {"url": "https://ipapi.co/json/", "parser": lambda d: {

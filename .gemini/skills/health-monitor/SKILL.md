@@ -1,3 +1,8 @@
+---
+name: health-monitor
+description: Tracks public health trends, water quality, and disease spread in post-event conditions (cholera, infectious outbreaks, radiation sickness clusters). Use when the user asks about epidemics, contaminated water, sanitation, corpse disposal, or post-event hygiene protocols.
+---
+
 # Sanitary & Epidemiologic Monitor
 
 Tracks public health trends, water quality, and the spread of disease in post-event conditions.

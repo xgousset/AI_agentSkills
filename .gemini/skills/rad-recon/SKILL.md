@@ -1,3 +1,8 @@
+---
+name: rad-recon
+description: Integrates real-time radiation sensor data (IRSN Teleray in France, equivalent networks elsewhere) to map actual contamination and identify hot-zones that differ from theoretical fallout models due to rain or terrain. Use when the user asks for measured radiation readings, sensor-based maps, or to validate theoretical fallout predictions against ground truth.
+---
+
 # Radiological Reconnaissance
 
 Simulates or integrates real-time radiation sensor data to map contamination with high precision.

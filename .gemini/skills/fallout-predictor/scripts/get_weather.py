@@ -1,9 +1,12 @@
 import requests
 import json
 import os
+import tempfile
 import time
 
-CACHE_FILE = "/tmp/fallout_weather_cache.json"
+import tempfile
+
+CACHE_FILE = os.path.join(tempfile.gettempdir(), "fallout_weather_cache.json")
 CACHE_EXPIRY = 900 # 15 minutes
 
 def get_wind_data(lat, lon):

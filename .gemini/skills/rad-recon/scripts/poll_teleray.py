@@ -1,9 +1,12 @@
 import requests
 import json
 import os
+import tempfile
 import time
 
-CACHE_FILE = "/tmp/teleray_sensor_cache.json"
+import tempfile
+
+CACHE_FILE = os.path.join(tempfile.gettempdir(), "teleray_sensor_cache.json")
 CACHE_EXPIRY = 600 # 10 minutes (matching Teleray update frequency)
 
 # Mock data for simulation or if the live endpoint is unreachable

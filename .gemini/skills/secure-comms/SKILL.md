@@ -1,3 +1,8 @@
+---
+name: secure-comms
+description: Manages low-bandwidth and offline communication strategies (mesh networks, AX.25 packet radio, aggressive message compression) for when the grid fails or cellular/internet are down. Use when the user reports network failure, asks about offline communication, ham radio, mesh, or how to send critical messages without internet.
+---
+
 # Secure Comms Manager
 
 Manages low-bandwidth and offline communication strategies when the grid fails.

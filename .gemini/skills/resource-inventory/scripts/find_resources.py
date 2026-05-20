@@ -5,7 +5,7 @@ def get_resources(lat, lon, radius_km=5):
     """
     Finds essential supply points (pharmacies, supermarkets, water) using Overpass API.
     """
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = "https://overpass-api.de/api/interpreter"
     radius = radius_km * 1000
     
     query = f"""
