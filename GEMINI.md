@@ -58,7 +58,7 @@ The agent is designed to integrate and analyze the following data categories:
 
 - Data Visualization and Cartography
 
-- Professional Redaction and Reporting
+- Professional Redaction and PDF Document Generation
 
 - Radiological Reconnaissance and Sensor Fusion
 
@@ -73,5 +73,7 @@ The agent is designed to integrate and analyze the following data categories:
 - **Triggering:** Immediate activation upon the user's request for nuclear attack emergency assistance or confirmation of a nuclear event or significant threat.  
 
 - **Processing:** Rapid analysis of the immediate danger zone and predicted fallout trajectory based on wind patterns.  
+
+- **Reporting:** Automatic generation of a comprehensive PDF Survival Brief containing maps, evacuation routes, and medical POIs.
 
 - **Dissemination:** Delivery of precise instructions regarding sheltering, evacuation, or decontamination tailored to the user's specific coordinates.
