@@ -48,6 +48,24 @@ The agent is designed to integrate and analyze the following data categories:
 
 - Meteorology
 
+- Geography and Accessibility
+
+- Population and Vulnerability Analysis
+
+- Critical Equipment and Strategic Sites
+
+- Sanitary and Epidemiologic Monitoring
+
+- Data Visualization and Cartography
+
+- Professional Redaction and Reporting
+
+- Radiological Reconnaissance and Sensor Fusion
+
+- Secure and Low-Bandwidth Communications
+
+- Psychological First Aid and Crisis Counseling
+
 - News and Information Feeds
 
 ## Operational Workflow

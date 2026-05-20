@@ -1,0 +1,13 @@
+[
+  {"name": "Pont Neuf (Paris)", "type": "Bridge", "lat": 48.8570, "lon": 2.3413, "material": "Stone", "criticality": "High"},
+  {"name": "Pont de la Concorde (Paris)", "type": "Bridge", "lat": 48.8633, "lon": 2.3214, "material": "Stone/Steel", "criticality": "High"},
+  {"name": "Pont de la Guillotière (Lyon)", "type": "Bridge", "lat": 45.7569, "lat": 4.8381, "material": "Stone", "criticality": "High"},
+  {"name": "Pont de l'Université (Lyon)", "type": "Bridge", "lat": 45.7525, "lon": 4.8353, "material": "Metal", "criticality": "Medium"},
+  {"name": "Pont de Pierre (Bordeaux)", "type": "Bridge", "lat": 44.8386, "lon": -0.5628, "material": "Stone", "criticality": "High"},
+  {"name": "Pont Jacques Chaban-Delmas (Bordeaux)", "type": "Bridge", "lat": 44.8583, "lon": -0.5500, "type": "Vertical-lift", "criticality": "High"},
+  {"name": "Pont d'Aquitaine (Bordeaux)", "type": "Bridge", "lat": 44.8797, "lon": -0.5369, "type": "Suspension", "criticality": "Very High"},
+  {"name": "Pont Neuf (Toulouse)", "type": "Bridge", "lat": 43.5994, "lon": 1.4386, "material": "Stone", "criticality": "High"},
+  {"name": "Pont de Cheviré (Nantes)", "type": "Bridge", "lat": 47.1928, "lon": -1.6133, "type": "Viaduct", "criticality": "Very High"},
+  {"name": "Pont de la Citadelle (Lille)", "type": "Bridge", "lat": 50.6397, "lon": 3.0481, "criticality": "Medium"},
+  {"name": "Viaduc de Corbière (Marseille)", "type": "Viaduct", "lat": 43.3578, "lon": 5.2883, "criticality": "Medium"}
+]

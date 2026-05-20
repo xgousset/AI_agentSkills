@@ -1,0 +1,29 @@
+id,name,type,lat,lon,capacity,specialty
+1,AP-HP (Paris),Hospital,48.8566,2.3522,3000,Oncology/Cardiology
+2,Hospices Civils de Lyon (HCL),Hospital,45.7640,4.8357,2000,Transplants/Burns
+3,AP-HM (Marseille),Hospital,43.2965,5.3698,1800,Infectious Diseases/Trauma
+4,CHU de Bordeaux,Hospital,44.8378,-0.5792,1500,Cardiology/Neurosciences
+5,CHU de Toulouse,Hospital,43.6047,1.4442,1600,Aeronautics/Geriatrics
+6,CHU de Lille,Hospital,50.6292,3.0573,1500,Diabetes/Pediatrics
+7,Hôpitaux Universitaires de Strasbourg,Hospital,48.5734,7.7521,1400,Robotics/Ophthalmology
+8,CHU de Nantes,Hospital,47.2184,-1.5536,1300,Immunology/Thoracic
+9,CHU de Montpellier,Hospital,43.6108,3.8767,1200,Rare Diseases/Orthopedics
+10,CHU de Nice,Hospital,43.7102,7.2620,1100,Gerontology/Pulmonology
+11,CHU de Rennes,Hospital,48.1173,-1.6778,1200,Liver Surgery/Cardiology
+12,CHU Grenoble Alpes,Hospital,45.1885,5.7245,1100,Mountain Medicine/Neuro-trauma
+13,CHU de Rouen,Hospital,49.4432,1.0999,1000,Cardiology/Digestive
+14,CHRU de Nancy,Hospital,48.6921,6.1844,1100,Oncology/Cardiology
+15,CHU d'Angers,Hospital,47.4784,-0.5632,1000,Emergency/Neurology
+16,CHU de Clermont-Ferrand,Hospital,45.7772,3.0870,1000,Rheumatology/Cardiology
+17,CHU de Saint-Étienne,Hospital,45.4397,4.3873,900,Sports/Geriatrics
+18,CHU Dijon Bourgogne,Hospital,47.3220,5.0415,1000,Oncology/Genetics
+19,CHU de Reims,Hospital,49.2583,4.0317,900,Geriatrics/Hematology
+20,CHU Amiens-Picardie,Hospital,49.8941,2.2957,1000,Face Transplants/Robotics
+21,CHU de Poitiers,Hospital,46.5802,0.3404,900,Imaging/Oncology
+22,CHU de Caen Normandie,Hospital,49.1829,-0.3707,900,Neurosciences/Oncology
+23,CHRU de Brest,Hospital,48.3904,-4.4861,900,Genetics/Marine Medicine
+24,CHU de Limoges,Hospital,45.8336,1.2611,800,Geriatrics/Infectious
+25,CHRU de Tours,Hospital,47.3941,0.6848,1000,Liver Diseases/Pediatrics
+26,CHU de Nîmes,Hospital,43.8367,4.3601,800,Hematology/Pain
+27,CHU de Besançon,Hospital,47.2378,6.0244,1200,Cell Therapy/Cardiology
+28,CHU d'Orléans,Hospital,47.9030,1.9093,900,Cardiology/Nephrology

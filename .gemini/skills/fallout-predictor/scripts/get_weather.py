@@ -13,19 +13,21 @@ def get_wind_data(lat, lon):
             if time.time() - cache['timestamp'] < CACHE_EXPIRY:
                 return cache['data']
 
-    # Open-Meteo Free Forecasting API
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_80m,wind_direction_120m,wind_direction_180m"
+    # Open-Meteo API with high-resolution vertical wind profile
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=wind_speed_10m,wind_direction_10m&hourly=wind_speed_10m,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_10m,wind_direction_80m,wind_direction_120m,wind_direction_180m,pressure_msl&models=best_match"
     
+    # Implementation uses standard requests for now, but structured for parallel execution if moved to a sub-agent
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         current_wind = {
-            "speed_10m": data['current']['wind_speed_10m'],
-            "direction_10m": data['current']['wind_direction_10m'],
-            "units": {
-                "speed": data['current_units']['wind_speed_10m'],
-                "direction": data['current_units']['wind_direction_10m']
-            }
+            "surface": {"speed": data['current']['wind_speed_10m'], "direction": data['current']['wind_direction_10m']},
+            "layers": [
+                {"alt": "80m", "speed": data['hourly']['wind_speed_80m'][0], "direction": data['hourly']['wind_direction_80m'][0]},
+                {"alt": "120m", "speed": data['hourly']['wind_speed_120m'][0], "direction": data['hourly']['wind_direction_120m'][0]},
+                {"alt": "180m", "speed": data['hourly']['wind_speed_180m'][0], "direction": data['hourly']['wind_direction_180m'][0]}
+            ],
+            "units": data['current_units']
         }
         
         with open(CACHE_FILE, 'w') as f:

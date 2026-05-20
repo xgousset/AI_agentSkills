@@ -13,8 +13,12 @@ def get_shelters(lat, lon, radius_km=20):
     (
       node["amenity"="shelter"]["shelter_type"~"bomb|nuclear"](around:{radius},{lat},{lon});
       way["amenity"="shelter"]["shelter_type"~"bomb|nuclear"](around:{radius},{lat},{lon});
-      node["bunker_type"](around:{radius},{lat},{lon});
-      way["bunker_type"](around:{radius},{lat},{lon});
+      node["amenity"="parking"]["parking"="underground"](around:{radius},{lat},{lon});
+      way["amenity"="parking"]["parking"="underground"](around:{radius},{lat},{lon});
+      node["station"="subway"](around:{radius},{lat},{lon});
+      way["station"="subway"](around:{radius},{lat},{lon});
+      node["building"~"university|hospital|government"](around:{radius},{lat},{lon});
+      way["building"~"university|hospital|government"](around:{radius},{lat},{lon});
     );
     out body;
     >;

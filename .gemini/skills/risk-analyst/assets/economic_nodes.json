@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Fos-sur-Mer ZIP",
+    "type": "Energy/Industrial Hub",
+    "lat": 43.4333,
+    "lon": 4.8833,
+    "importance": "Critical",
+    "note": "Hydrocarbons, petrochemicals, ArcelorMittal steel."
+  },
+  {
+    "name": "Grand Port Maritime du Havre",
+    "type": "Logistics/Refining",
+    "lat": 49.4833,
+    "lon": 0.1000,
+    "importance": "Critical",
+    "note": "Main container port, TotalEnergies refinery."
+  },
+  {
+    "name": "La Défense (Paris)",
+    "type": "Economic/Political",
+    "lat": 48.8919,
+    "lon": 2.2381,
+    "importance": "High",
+    "note": "Main business district, corporate HQ concentration."
+  },
+  {
+    "name": "Airbus Complex (Toulouse)",
+    "type": "Aerospace/Industrial",
+    "lat": 43.6294,
+    "lon": 1.3633,
+    "importance": "High",
+    "note": "Global aerospace manufacturing hub."
+  },
+  {
+    "name": "Port de Marseille",
+    "type": "Logistics/Telecom",
+    "lat": 43.2965,
+    "lon": 5.3698,
+    "importance": "High",
+    "note": "Major Mediterranean gateway, subsea cable landing point."
+  }
+]
