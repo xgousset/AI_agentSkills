@@ -90,6 +90,7 @@ Each skill folder may contain:
 | [`api-auditor`](./.gemini/skills/api-auditor/SKILL.md) | HTTP endpoint health check (status, latency) | "check", "test", "audit URL" |
 | [`skill-optimizer`](./.gemini/skills/skill-optimizer/SKILL.md) | Audit existing skills, propose improvements | "improve skill", "optimize skill" |
 | [`skill-proposer`](./.gemini/skills/skill-proposer/SKILL.md) | Identify missing domains, propose new skills | "what's missing", "new skill idea" |
+| [`token-optimizer`](./.gemini/skills/token-optimizer/SKILL.md) | Maximize context efficiency + minimize costs | "tokens", "cost", "efficiency" |
 
 ---
 

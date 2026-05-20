@@ -68,6 +68,8 @@ The agent is designed to integrate and analyze the following data categories:
 
 - News and Information Feeds
 
+- Token and Context Optimization
+
 ## Operational Workflow
 
 - **Triggering:** Immediate activation upon the user's request for nuclear attack emergency assistance or confirmation of a nuclear event or significant threat.  
