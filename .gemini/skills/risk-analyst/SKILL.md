@@ -34,3 +34,4 @@ Determines the vulnerability of a location to a nuclear strike.
 
 - **Target categorization**: [references/targets.md](references/targets.md)
 - **Offline plant database**: [assets/nuclear_plants.csv](assets/nuclear_plants.csv) — GPPD v1.3 schema (country_code, country, name, gppd_id, capacity_mw, latitude, longitude, ...).
+- **Economic & industrial nodes**: [assets/economic_nodes.json](assets/economic_nodes.json) — curated list of high-value economic targets (energy hubs, major ports, steel/petrochemical sites) with name, type, lat/lon, and importance rating. Cross-reference in Step 1 alongside nuclear plants and military bases.

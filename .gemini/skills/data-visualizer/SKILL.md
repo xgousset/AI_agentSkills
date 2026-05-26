@@ -9,9 +9,12 @@ Transforms complex spatial and technical data into clear, actionable visual repr
 
 ## Workflow
 1. **Fallout Mapping**: Generate heatmaps of radiation intensity.
-2. **Radius Visualization**: Render concentric blast zones over local maps.
+2. **Radius Visualization**: Render concentric blast zones over local maps using `scripts/create_map.py` — accepts `lat`, `lon`, and `yield_kt`; outputs a PNG file.
 3. **Resource Dashboard**: Create visual charts of supply levels and shelter capacity.
 4. **Export Engine**: Support exporting all visualizations as high-compression PNG/JPG files for embedding in PDF reports.
+
+## Scripts
+- `scripts/create_map.py` — generates a Matplotlib blast-radius overlay (thermal, blast wave, prompt radiation circles) for a given detonation point.
 
 ## Tools
 - **Matplotlib/Plotly**: For generating charts and static maps.

@@ -13,7 +13,7 @@ Assesses population density and identifies vulnerable groups requiring prioritiz
 3. **Resource Allocation**: Predict demand for pediatric/geriatric medical supplies based on local demographics.
 
 ## Resources
-- `assets/pop_vulnerability.csv`: Regional data on specialized care facilities.
+- `assets/hospitals.csv`: Regional data on specialized care facilities (hospitals, nursing homes, schools) — replaces the earlier `pop_vulnerability.csv` name.
 - `scripts/analyze_density.py`: Correlates population data with blast radii.
 
 ## Data Sources

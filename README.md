@@ -30,7 +30,7 @@ AI_agentSkills/
     └── skills/
         ├── api-auditor/            # HTTP endpoint health check
         ├── comms-monitor/          # Polls official emergency feeds
-        ├── data-visualizer/        # 🚧 Heatmaps, blast radii, dashboards
+        ├── data-visualizer/        # Heatmaps, blast radii, dashboards
         ├── demographic-analyst/    # 🚧 Population density & vulnerable groups
         ├── emergency-briefer/      # BLUF briefs (Flash/Standard/Technical)
         ├── fallout-predictor/      # Multi-altitude plume + contamination zones
@@ -111,7 +111,7 @@ Optional Python packages (only for WIP visual skills): `matplotlib`, `plotly`, `
 |---|---|---|
 | [`emergency-briefer`](./.gemini/skills/emergency-briefer/SKILL.md) | BLUF briefs (Flash / Standard / Technical) | "brief", "summary", "tl;dr" |
 | [`pdf-generator`](./.gemini/skills/pdf-generator/SKILL.md) 🚧 | Aggregates briefs + maps into offline PDF | "PDF", "printable", "download", "offline brief" |
-| [`data-visualizer`](./.gemini/skills/data-visualizer/SKILL.md) 🚧 | Heatmaps, blast radii overlays, dashboards | "plot", "map", "visualize" |
+| [`data-visualizer`](./.gemini/skills/data-visualizer/SKILL.md) | Heatmaps, blast radii overlays, dashboards | "plot", "map", "visualize" |
 | [`secure-comms`](./.gemini/skills/secure-comms/SKILL.md) 🚧 | Mesh / AX.25 / compression offline fallback | "no internet", "ham radio", "mesh" |
 
 ### Meta — tooling
@@ -148,7 +148,7 @@ End-to-end scenarios designed to exercise the catalog. The "Skills activated" co
 | 16 | "Map nearby vulnerable people — hospitals, schools, nursing homes." 🚧 | `location-provider` → `demographic-analyst` |
 | 17 | "Which bridges and tunnels can I still use to leave the city?" 🚧 | `location-provider` → `geo-analyst` |
 | 18 | "Is the water from my tap safe to drink right now?" 🚧 | `health-monitor` → `health-advisor` |
-| 19 | "Plot a fallout heatmap over my region." 🚧 | `location-provider` → `fallout-predictor` → `data-visualizer` |
+| 19 | "Plot a fallout heatmap over my region." | `location-provider` → `fallout-predictor` → `data-visualizer` |
 | 20 | "Cell network is down — how do I send a message?" 🚧 | `secure-comms` |
 | 21 | "Give me a turn-by-turn route out of the danger zone." 🚧 | `location-provider` → `fallout-predictor` → `logistics-navigator` |
 | 22 | "Generate me a printable PDF brief I can take offline." 🚧 | `location-provider` → `fallout-predictor` → `risk-analyst` → `pdf-generator` |
@@ -181,9 +181,10 @@ Per-skill smoke prompts (functional skills):
 - **skill-optimizer** — "Audit the `risk-analyst` skill."
 - **skill-proposer** — "Propose a skill for restoring communications after an EMP."
 - **token-optimizer** — "Apply token-efficient mode for the next investigation."
+- **data-visualizer** — "Plot the blast radius for a 150 kt detonation over Lyon."
 - **pdf-generator** — "Generate a PDF emergency brief from the current situation."
 
-WIP skills (route correctly, scripts pending): `data-visualizer`, `demographic-analyst`, `geo-analyst`, `health-monitor`, `infra-monitor`, `logistics-navigator`, `secure-comms`. The `pdf-generator` script runs but only emits a `.meta.json` mock — real PDF rendering (fpdf2 / ReportLab) is still TODO.
+WIP skills (route correctly, scripts pending): `demographic-analyst`, `geo-analyst`, `health-monitor`, `infra-monitor`, `logistics-navigator`, `secure-comms`. The `pdf-generator` script runs but only emits a `.meta.json` mock — real PDF rendering (fpdf2 / ReportLab) is still TODO.
 
 ---
 
