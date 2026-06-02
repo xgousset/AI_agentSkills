@@ -22,5 +22,5 @@ __pycache__/
 *.pyc
 
 # Chat memory checkpoint (CHAT_DB)
-*.db
-chat_memory.db
+*.db-*
+checkpoint.db
