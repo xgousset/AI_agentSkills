@@ -11,3 +11,16 @@ Thumbs.db
 # Environment variables
 .env
 .env.*
+
+# Python virtualenv
+NuclearAgent/
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Chat memory checkpoint (CHAT_DB)
+*.db
+chat_memory.db
