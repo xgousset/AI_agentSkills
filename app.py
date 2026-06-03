@@ -1,15 +1,13 @@
-from functools import lru_cache
 from uuid import uuid4
 
-from dotenv import load_dotenv
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import Flask, abort, redirect, render_template, url_for
 from flask_sqlalchemy import SQLAlchemy
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from flask_socketio import SocketIO, emit, join_room
+
+import emergency_chatbot as emergency
 
 class Base(DeclarativeBase):
     pass
@@ -23,8 +21,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///checkpoint.db'
 
 db.init_app(app)
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins='*')
-
-load_dotenv()
 
 class Chat(db.Model):
     __tablename__ = 'chats'
@@ -71,64 +67,6 @@ def get_chat_messages(chat):
     return Message.query.filter_by(chat_id=chat.id).order_by(Message.id.asc()).all()
 
 
-@lru_cache(maxsize=1)
-def get_llm():
-    backend = (app.config.get('LLM_BACKEND') or 'ollama').strip().lower()
-    if backend != 'ollama':
-        raise ValueError(f'Unknown backend: {backend}')
-
-    return ChatOllama(
-        model=app.config.get('OLLAMA_MODEL') or 'qwen2.5:3b',
-        temperature=0,
-    )
-
-
-def build_messages(chat_messages):
-    messages = [
-        SystemMessage(content='Tu es un assistant utile et concis. Réponds en français.'),
-    ]
-
-    for message in chat_messages:
-        if message.role == 'user':
-            messages.append(HumanMessage(content=message.content))
-        else:
-            messages.append(AIMessage(content=message.content))
-
-    return messages
-
-
-def generate_ai_reply(chat):
-    try:
-        llm = get_llm()
-        response = llm.invoke(build_messages(get_chat_messages(chat)))
-        content = getattr(response, 'content', '') or ''
-        return content.strip() or 'Je n\'ai pas de réponse pour le moment.'
-    except Exception as exc:
-        return f"L'assistant IA est indisponible pour le moment ({type(exc).__name__})."
-
-
-def stream_ai_reply(chat):
-    reply_parts = []
-
-    try:
-        llm = get_llm()
-        for chunk in llm.stream(build_messages(get_chat_messages(chat))):
-            chunk_text = getattr(chunk, 'content', '') or ''
-            if not chunk_text:
-                continue
-
-            reply_parts.append(chunk_text)
-            emit('assistant_delta', {'content': chunk_text}, room=chat.thread_id)
-
-        reply_text = ''.join(reply_parts).strip() or 'Je n\'ai pas de réponse pour le moment.'
-    except Exception as exc:
-        reply_text = f"L'assistant IA est indisponible pour le moment ({type(exc).__name__})."
-
-    db.session.add(Message(chat_id=chat.id, role='assistant', content=reply_text))
-    db.session.commit()
-    emit('assistant_done', {'content': reply_text}, room=chat.thread_id)
-
-
 @socketio.on('join_chat')
 def handle_join_chat(data):
     chat_id = (data or {}).get('chat_id', '').strip()
@@ -163,7 +101,20 @@ def handle_send_message(data):
 
     emit('user_message', {'content': content}, room=active_chat.thread_id)
     emit('assistant_start', room=active_chat.thread_id)
-    stream_ai_reply(active_chat)
+    reply_parts = []
+
+    try:
+        for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id):
+            reply_parts.append(chunk_text)
+            emit('assistant_delta', {'content': chunk_text}, room=active_chat.thread_id)
+
+        reply_text = ''.join(reply_parts).strip() or 'Je n\'ai pas de réponse pour le moment.'
+    except Exception as exc:
+        reply_text = f"L'assistant IA est indisponible pour le moment ({type(exc).__name__})."
+
+    db.session.add(Message(chat_id=active_chat.id, role='assistant', content=reply_text))
+    db.session.commit()
+    emit('assistant_done', {'content': reply_text}, room=active_chat.thread_id)
 
 @app.route('/')
 def hello():

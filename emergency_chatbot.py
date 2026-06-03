@@ -126,10 +126,22 @@ agent = create_agent(
 )
 
 # Chat loop
-thread_id = "session-1"  # mutable: /reset starts a fresh conversation
+DEFAULT_THREAD_ID = "session-1"
+thread_id = DEFAULT_THREAD_ID  # mutable: /reset starts a fresh conversation
 
-def make_config():
-    return {"configurable": {"thread_id": thread_id}, "recursion_limit": 10}
+def make_config(current_thread_id=None):
+    return {"configurable": {"thread_id": current_thread_id or thread_id}, "recursion_limit": 10}
+
+
+def iter_response_tokens(user_message, current_thread_id=None):
+    for token, metadata in agent.stream(
+        {"messages": [{"role": "user", "content": user_message}]},
+        stream_mode="messages",
+        config=make_config(current_thread_id),
+    ):
+        if isinstance(token, AIMessageChunk) and token.content:
+            yield token.content
+
 
 def print_help():
     print("Commands:")
@@ -139,48 +151,49 @@ def print_help():
     print("  quit / exit / salir  leave")
 
 
-print("\n=== EMERGENCY ASSISTANT (type '/help' for commands, 'quit' to exit) ===")
-print("Try: 'Where am I and where are the nearest shelters?'")
-print("     'And the closest pharmacies?'   /   'Which way would fallout drift?'\n")
+def run_cli():
+    global thread_id
 
-while True:
-    user = input("you> ").strip()
-    if user.lower() in {"", "quit", "exit", "salir"}:
-        print("Stay safe.")
-        break
+    print("\n=== EMERGENCY ASSISTANT (type '/help' for commands, 'quit' to exit) ===")
+    print("Try: 'Where am I and where are the nearest shelters?'")
+    print("     'And the closest pharmacies?'   /   'Which way would fallout drift?'\n")
 
-    # --- control commands ---
-    if user.startswith("/"):
-        parts = user.split()
-        cmd = parts[0].lower()
-        if cmd == "/help":
-            print_help()
-        elif cmd == "/reset":
-            import uuid
-            thread_id = "session-" + uuid.uuid4().hex[:8]
-            print(f"[new conversation: {thread_id}]")
-        elif cmd == "/coords":
-            if len(parts) != 3:
-                print("[usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02]")
+    while True:
+        user = input("you> ").strip()
+        if user.lower() in {"", "quit", "exit", "salir"}:
+            print("Stay safe.")
+            break
+
+        # --- control commands ---
+        if user.startswith("/"):
+            parts = user.split()
+            cmd = parts[0].lower()
+            if cmd == "/help":
+                print_help()
+            elif cmd == "/reset":
+                import uuid
+                thread_id = "session-" + uuid.uuid4().hex[:8]
+                print(f"[new conversation: {thread_id}]")
+            elif cmd == "/coords":
+                if len(parts) != 3:
+                    print("[usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02]")
+                else:
+                    # Feed coords to the agent as a remembered fact (uses conversation memory)
+                    user = f"My current location is latitude {parts[1]}, longitude {parts[2]}. Remember it for the rest of this conversation."
+                    print(f"[location set to {parts[1]}, {parts[2]}]")
             else:
-                # Feed coords to the agent as a remembered fact (uses conversation memory)
-                user = f"My current location is latitude {parts[1]}, longitude {parts[2]}. Remember it for the rest of this conversation."
-                print(f"[location set to {parts[1]}, {parts[2]}]")
-        else:
-            print(f"[unknown command: {cmd}] type /help")
-        if user.startswith("/"):  # command handled, nothing to send to the model
-            continue
+                print(f"[unknown command: {cmd}] type /help")
+            if user.startswith("/"):  # command handled, nothing to send to the model
+                continue
 
-    print("bot> ", end="")
-    try:
-        for token, metadata in agent.stream(
-            {"messages": [{"role": "user", "content": user}]},
-            stream_mode="messages",
-            config=make_config(),
-        ):
-            # AIMessageChunk = the model's own text; skip tool output / tool_call steps
-            if isinstance(token, AIMessageChunk) and token.content:
-                print(token.content, end="", flush=True)
-        print()
-    except Exception as e:
-        print(f"\n[stopped: {type(e).__name__}] model looped without a final answer.")
+        print("bot> ", end="")
+        try:
+            for token_text in iter_response_tokens(user, thread_id):
+                print(token_text, end="", flush=True)
+            print()
+        except Exception as e:
+            print(f"\n[stopped: {type(e).__name__}] model looped without a final answer.")
+
+
+if __name__ == "__main__":
+    run_cli()
