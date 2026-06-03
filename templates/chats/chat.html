@@ -41,7 +41,7 @@
                     {% for message in messages %}
                         <article class="message message-{{ message.role }}" data-role="{{ message.role }}">
                             <span class="message-role">{{ 'Vous' if message.role == 'user' else 'IA' }}</span>
-                            <p>{{ message.content }}</p>
+                            <div class="message-body">{{ message.content }}</div>
                         </article>
                     {% endfor %}
                 {% else %}
@@ -63,6 +63,8 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <script>
         const chatId = document.getElementById('message-list').dataset.chatId;
         const socket = io({ transports: ['websocket', 'polling'] });
@@ -73,12 +75,26 @@
 
         let currentAssistantMessage = null;
         let assistantStreamActive = false;
+        let assistantBuffer = '';
+
+        // Render markdown safely (DOMPurify guards against any HTML injection).
+        const markdownToHtml = (text) => DOMPurify.sanitize(marked.parse(text || ''));
 
         const scrollToBottom = () => {
             messageList.scrollTop = messageList.scrollHeight;
         };
 
-        const appendMessage = (role, content) => {
+        const setBody = (body, content, useMarkdown) => {
+            if (useMarkdown) {
+                body.classList.add('rendered');
+                body.innerHTML = markdownToHtml(content);
+            } else {
+                body.classList.remove('rendered');
+                body.textContent = content;
+            }
+        };
+
+        const appendMessage = (role, content, useMarkdown = false) => {
             const article = document.createElement('article');
             article.className = `message message-${role}`;
             article.dataset.role = role;
@@ -87,8 +103,9 @@
             label.className = 'message-role';
             label.textContent = role === 'user' ? 'Vous' : 'IA';
 
-            const body = document.createElement('p');
-            body.textContent = content;
+            const body = document.createElement('div');
+            body.className = 'message-body';
+            setBody(body, content, useMarkdown);
 
             article.append(label, body);
             messageList.appendChild(article);
@@ -98,6 +115,12 @@
 
         socket.on('connect', () => {
             socket.emit('join_chat', { chat_id: chatId });
+        });
+
+        // Don't leave the UI stuck if the connection drops mid-stream.
+        socket.on('disconnect', () => {
+            assistantStreamActive = false;
+            submitButton.disabled = false;
         });
 
         socket.on('chat_error', (payload) => {
@@ -112,43 +135,68 @@
 
         socket.on('assistant_start', () => {
             assistantStreamActive = true;
+            assistantBuffer = '';
             currentAssistantMessage = appendMessage('assistant', '');
         });
 
         socket.on('assistant_delta', (payload) => {
             if (!currentAssistantMessage) {
+                assistantBuffer = '';
                 currentAssistantMessage = appendMessage('assistant', '');
             }
-
-            const paragraph = currentAssistantMessage.querySelector('p');
-            paragraph.textContent += payload.content || '';
+            // Show raw text while streaming; render markdown once the reply is complete.
+            assistantBuffer += payload.content || '';
+            currentAssistantMessage.querySelector('.message-body').textContent = assistantBuffer;
             scrollToBottom();
         });
 
         socket.on('assistant_done', (payload) => {
+            const useMarkdown = payload.markdown !== false;
+            const finalText = (payload.content !== undefined && payload.content !== null)
+                ? payload.content
+                : assistantBuffer;
+
             if (!currentAssistantMessage) {
-                currentAssistantMessage = appendMessage('assistant', payload.content || '');
+                currentAssistantMessage = appendMessage('assistant', finalText, useMarkdown);
             } else {
-                currentAssistantMessage.querySelector('p').textContent = payload.content || currentAssistantMessage.querySelector('p').textContent;
+                setBody(currentAssistantMessage.querySelector('.message-body'), finalText, useMarkdown);
             }
 
             currentAssistantMessage = null;
+            assistantBuffer = '';
             assistantStreamActive = false;
             submitButton.disabled = false;
-            messageInput.value = '';
             scrollToBottom();
         });
 
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-
+        const sendMessage = () => {
             const value = messageInput.value.trim();
             if (!value || assistantStreamActive) {
                 return;
             }
-
             submitButton.disabled = true;
             socket.emit('send_message', { chat_id: chatId, message: value });
+            messageInput.value = '';  // clear immediately, don't wait for the reply
+        };
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            sendMessage();
+        });
+
+        // Enter sends; Shift+Enter inserts a newline.
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Render the assistant history (server-sent as plain text) as markdown.
+        document.querySelectorAll('.message-assistant .message-body').forEach((el) => {
+            const raw = el.textContent;
+            el.classList.add('rendered');
+            el.innerHTML = markdownToHtml(raw);
         });
 
         scrollToBottom();

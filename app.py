@@ -1,3 +1,4 @@
+import os
 from uuid import uuid4
 
 from flask import Flask, abort, redirect, render_template, url_for, request
@@ -96,6 +97,14 @@ def handle_join_chat(data):
     emit('chat_joined', {'chat_id': active_chat.thread_id})
 
 
+WEB_HELP = (
+    "Commandes disponibles :\n"
+    "• /coords <lat> <lon> — fixe ta position manuellement (ex : /coords 47.24 6.02)\n"
+    "• /help — affiche cette aide\n"
+    "Pour repartir de zéro, clique sur « Nouvelle conversation »."
+)
+
+
 @socketio.on('send_message')
 def handle_send_message(data):
     chat_id = (data or {}).get('chat_id', '').strip()
@@ -112,6 +121,23 @@ def handle_send_message(data):
 
     join_room(active_chat.thread_id)
 
+    # --- control commands: same parser as the CLI ---
+    kind, payload = emergency.parse_command(content)
+    if kind in ('help', 'reset', 'error'):
+        # Echo what the user typed, then answer locally — no model call, not persisted.
+        emit('user_message', {'content': content}, room=active_chat.thread_id)
+        if kind == 'help':
+            info = WEB_HELP
+        elif kind == 'reset':
+            info = "Pour repartir de zéro, clique sur « Nouvelle conversation »."
+        else:  # error / unknown command
+            info = payload
+        emit('assistant_done', {'content': info, 'markdown': False}, room=active_chat.thread_id)
+        return
+
+    # /coords -> show the literal command but feed the rewritten text to the model.
+    model_input = payload if kind == 'send' else content
+
     db.session.add(Message(chat_id=active_chat.id, role='user', content=content))
     db.session.commit()
 
@@ -120,7 +146,7 @@ def handle_send_message(data):
     reply_parts = []
 
     try:
-        for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id):
+        for chunk_text in emergency.iter_response_tokens(model_input, active_chat.thread_id):
             reply_parts.append(chunk_text)
             emit('assistant_delta', {'content': chunk_text}, room=active_chat.thread_id)
 
@@ -189,4 +215,6 @@ def chat(chat_id):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5001, debug=True)
+    # Default to localhost only. Set FLASK_HOST=0.0.0.0 in .env to expose on the LAN.
+    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    socketio.run(app, host=host, port=5001, debug=True)

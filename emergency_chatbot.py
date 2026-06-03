@@ -16,13 +16,19 @@ from langgraph.checkpoint.memory import MemorySaver
 
 def make_checkpointer():
     """In-memory by default. OPTIONAL: set CHAT_DB=path.db for memory that
-    survives restarts (needs `pip install langgraph-checkpoint-sqlite`)."""
+    survives restarts (needs `pip install langgraph-checkpoint-sqlite`).
+    A relative path is resolved against this file's folder (project root) so it
+    lands in the same place regardless of the current working directory, and
+    matches Flask's instance/ folder (e.g. CHAT_DB=instance/checkpoint.db)."""
     db = os.getenv("CHAT_DB", "").strip()
     if not db:
         return MemorySaver()
+    if not os.path.isabs(db):
+        db = os.path.join(os.path.dirname(os.path.abspath(__file__)), db)
     try:
         import sqlite3
         from langgraph.checkpoint.sqlite import SqliteSaver
+        os.makedirs(os.path.dirname(db), exist_ok=True)
         conn = sqlite3.connect(db, check_same_thread=False)
         print(f"[persistent memory: {db}]")
         return SqliteSaver(conn)
@@ -108,6 +114,15 @@ def wind_forecast(lat: float, lon: float) -> dict:
 
 tools = [where_am_i, find_shelters, find_supplies, wind_forecast]
 
+# Optional extra tools (more skills). Fully isolated: if extra_tools.py is deleted
+# or fails to import, we just keep the 4 base tools above — nothing else breaks.
+try:
+    from extra_tools import EXTRA_TOOLS
+    tools += EXTRA_TOOLS
+    print(f"[extra tools loaded: {[t.name for t in EXTRA_TOOLS]}]")
+except Exception as e:
+    print(f"[extra tools disabled: {e}]")
+
 # Pick memory backend (in-memory, or persistent if CHAT_DB is set)
 checkpointer = make_checkpointer()
 
@@ -143,6 +158,45 @@ def iter_response_tokens(user_message, current_thread_id=None):
             yield token.content
 
 
+COORDS_USAGE = "usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02"
+
+
+def new_thread_id():
+    """Generate a fresh conversation id (used by /reset and the web 'new chat')."""
+    import uuid
+    return "session-" + uuid.uuid4().hex[:8]
+
+
+def parse_command(text):
+    """Parse a leading /command into a UI-agnostic intent so both the CLI and the
+    web layer share the exact same behavior.
+
+    Returns (kind, payload):
+      ("none",  None)            -> not a command; send `text` to the model as-is
+      ("help",  None)            -> caller should show help
+      ("reset", None)            -> caller should start a fresh conversation
+      ("send",  rewritten_text)  -> send this rewritten message to the model
+      ("error", message)         -> caller should show this usage/error message
+    """
+    if not text.startswith("/"):
+        return ("none", None)
+    parts = text.split()
+    cmd = parts[0].lower()
+    if cmd == "/help":
+        return ("help", None)
+    if cmd == "/reset":
+        return ("reset", None)
+    if cmd == "/coords":
+        if len(parts) != 3:
+            return ("error", f"[{COORDS_USAGE}]")
+        lat, lon = parts[1], parts[2]
+        return ("send", (
+            f"My current location is latitude {lat}, longitude {lon}. "
+            "Remember it for the rest of this conversation."
+        ))
+    return ("error", f"[unknown command: {cmd}] type /help")
+
+
 def print_help():
     print("Commands:")
     print("  /help              show this help")
@@ -164,27 +218,23 @@ def run_cli():
             print("Stay safe.")
             break
 
-        # --- control commands ---
+        # --- control commands (shared logic with the web layer) ---
         if user.startswith("/"):
-            parts = user.split()
-            cmd = parts[0].lower()
-            if cmd == "/help":
+            kind, payload = parse_command(user)
+            if kind == "help":
                 print_help()
-            elif cmd == "/reset":
-                import uuid
-                thread_id = "session-" + uuid.uuid4().hex[:8]
-                print(f"[new conversation: {thread_id}]")
-            elif cmd == "/coords":
-                if len(parts) != 3:
-                    print("[usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02]")
-                else:
-                    # Feed coords to the agent as a remembered fact (uses conversation memory)
-                    user = f"My current location is latitude {parts[1]}, longitude {parts[2]}. Remember it for the rest of this conversation."
-                    print(f"[location set to {parts[1]}, {parts[2]}]")
-            else:
-                print(f"[unknown command: {cmd}] type /help")
-            if user.startswith("/"):  # command handled, nothing to send to the model
                 continue
+            if kind == "reset":
+                thread_id = new_thread_id()
+                print(f"[new conversation: {thread_id}]")
+                continue
+            if kind == "error":
+                print(payload)
+                continue
+            if kind == "send":
+                # /coords: send the rewritten message to the model below
+                user = payload
+                print("[location noted]")
 
         print("bot> ", end="")
         try:
