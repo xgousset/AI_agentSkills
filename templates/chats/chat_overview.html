@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat Overview{% endblock %}
+
+{% block header %}
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Conversations IA</p>
+            <h1>Chat Overview</h1>
+        </div>
+        <a class="button button-primary" href="{{ url_for('new_chat') }}">Nouvelle conversation</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {% if chat_list %}
+        <div class="conversation-list">
+            {% for chat in chat_list %}
+                <a class="conversation-card" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
+                    <span class="conversation-label">Conversation</span>
+                    <strong>{{ chat.thread_id }}</strong>
+                    <span class="conversation-link">Ouvrir</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>Aucune conversation pour le moment</h2>
+            <p>Crée une nouvelle conversation pour commencer à discuter avec l'IA.</p>
+            <a class="button button-primary" href="{{ url_for('new_chat') }}">Démarrer une conversation</a>
+        </div>
+    {% endif %}
+{% endblock %}

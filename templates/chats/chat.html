@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat{% endblock %}
+
+{% block header %}
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Conversation active</p>
+            <h1>{{ active_chat.thread_id }}</h1>
+        </div>
+        <div class="header-actions">
+            <a class="button" href="{{ url_for('chat_overview') }}">Toutes les conversations</a>
+            <a class="button button-primary" href="{{ url_for('new_chat') }}">Nouvelle conversation</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="chat-layout">
+        <aside class="chat-sidebar">
+            <h2>Conversations</h2>
+            <div class="sidebar-list">
+                {% for chat in chat_list %}
+                    <a class="sidebar-item{% if chat.thread_id == active_chat.thread_id %} is-active{% endif %}" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
+                        {{ chat.thread_id }}
+                    </a>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <section class="chat-panel">
+            <div class="message-list" id="message-list" data-chat-id="{{ active_chat.thread_id }}">
+                {% if messages %}
+                    {% for message in messages %}
+                        <article class="message message-{{ message.role }}" data-role="{{ message.role }}">
+                            <span class="message-role">{{ 'Vous' if message.role == 'user' else 'IA' }}</span>
+                            <p>{{ message.content }}</p>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state compact">
+                        <h2>Commence la conversation</h2>
+                        <p>Envoie un premier message pour lancer ce fil.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <form class="chat-form" id="chat-form">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="4" placeholder="Écris ton message à l'IA..."></textarea>
+                <div class="form-actions">
+                    <button class="button button-primary" type="submit">Envoyer</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const chatId = document.getElementById('message-list').dataset.chatId;
+        const socket = io({ transports: ['websocket', 'polling'] });
+        const form = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message');
+        const messageList = document.getElementById('message-list');
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        let currentAssistantMessage = null;
+        let assistantStreamActive = false;
+
+        const scrollToBottom = () => {
+            messageList.scrollTop = messageList.scrollHeight;
+        };
+
+        const appendMessage = (role, content) => {
+            const article = document.createElement('article');
+            article.className = `message message-${role}`;
+            article.dataset.role = role;
+
+            const label = document.createElement('span');
+            label.className = 'message-role';
+            label.textContent = role === 'user' ? 'Vous' : 'IA';
+
+            const body = document.createElement('p');
+            body.textContent = content;
+
+            article.append(label, body);
+            messageList.appendChild(article);
+            scrollToBottom();
+            return article;
+        };
+
+        socket.on('connect', () => {
+            socket.emit('join_chat', { chat_id: chatId });
+        });
+
+        socket.on('chat_error', (payload) => {
+            appendMessage('assistant', payload.message || 'Une erreur est survenue.');
+            assistantStreamActive = false;
+            submitButton.disabled = false;
+        });
+
+        socket.on('user_message', (payload) => {
+            appendMessage('user', payload.content || '');
+        });
+
+        socket.on('assistant_start', () => {
+            assistantStreamActive = true;
+            currentAssistantMessage = appendMessage('assistant', '');
+        });
+
+        socket.on('assistant_delta', (payload) => {
+            if (!currentAssistantMessage) {
+                currentAssistantMessage = appendMessage('assistant', '');
+            }
+
+            const paragraph = currentAssistantMessage.querySelector('p');
+            paragraph.textContent += payload.content || '';
+            scrollToBottom();
+        });
+
+        socket.on('assistant_done', (payload) => {
+            if (!currentAssistantMessage) {
+                currentAssistantMessage = appendMessage('assistant', payload.content || '');
+            } else {
+                currentAssistantMessage.querySelector('p').textContent = payload.content || currentAssistantMessage.querySelector('p').textContent;
+            }
+
+            currentAssistantMessage = null;
+            assistantStreamActive = false;
+            submitButton.disabled = false;
+            messageInput.value = '';
+            scrollToBottom();
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const value = messageInput.value.trim();
+            if (!value || assistantStreamActive) {
+                return;
+            }
+
+            submitButton.disabled = true;
+            socket.emit('send_message', { chat_id: chatId, message: value });
+        });
+
+        scrollToBottom();
+    </script>
+{% endblock %}
