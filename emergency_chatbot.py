@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessageChunk
+from langchain_core.runnables import RunnableConfig
 
 # LLM provider (Ollama)
 from langchain_ollama import ChatOllama
@@ -67,11 +68,35 @@ _resources = _load("resource-inventory", "find_resources.py")
 _weather = _load("fallout-predictor", "get_weather.py")
 
 
+# Per-conversation manual location overrides set via the /coords command.
+# Keyed by thread_id. In-memory only (cleared on server restart).
+_pinned_locations = {}
+
+
+def set_location(thread_id, lat, lon):
+    """Pin a manual location for a conversation. where_am_i() will then return
+    these coordinates instead of doing IP geolocation, so the model cannot drift
+    back to the (often wrong) IP-based location."""
+    _pinned_locations[thread_id] = {"lat": lat, "lon": lon}
+
+
+def _thread_of(config):
+    """Extract the thread_id LangGraph injects into a tool's RunnableConfig."""
+    if not config:
+        return None
+    return config.get("configurable", {}).get("thread_id")
+
+
 # Tools: thin wrappers that summarize so the model isn't flooded with raw JSON
 @tool
-def where_am_i() -> dict:
-    """Get the user's current location (latitude, longitude, city) from their public IP.
+def where_am_i(config: RunnableConfig = None) -> dict:
+    """Get the user's current location (latitude, longitude, city). Returns the
+    location the user pinned with /coords if set, otherwise their public-IP location.
     Call this FIRST whenever you need coordinates and the user has not given them."""
+    pinned = _pinned_locations.get(_thread_of(config))
+    if pinned:
+        return {"lat": pinned["lat"], "lon": pinned["lon"],
+                "city": None, "source": "user-set (/coords)"}
     return _location.get_location()
 
 
@@ -172,11 +197,11 @@ def parse_command(text):
     web layer share the exact same behavior.
 
     Returns (kind, payload):
-      ("none",  None)            -> not a command; send `text` to the model as-is
-      ("help",  None)            -> caller should show help
-      ("reset", None)            -> caller should start a fresh conversation
-      ("send",  rewritten_text)  -> send this rewritten message to the model
-      ("error", message)         -> caller should show this usage/error message
+      ("none",   None)          -> not a command; send `text` to the model as-is
+      ("help",   None)          -> caller should show help
+      ("reset",  None)          -> caller should start a fresh conversation
+      ("coords", (lat, lon))    -> caller should pin this location (floats)
+      ("error",  message)       -> caller should show this usage/error message
     """
     if not text.startswith("/"):
         return ("none", None)
@@ -189,11 +214,13 @@ def parse_command(text):
     if cmd == "/coords":
         if len(parts) != 3:
             return ("error", f"[{COORDS_USAGE}]")
-        lat, lon = parts[1], parts[2]
-        return ("send", (
-            f"My current location is latitude {lat}, longitude {lon}. "
-            "Remember it for the rest of this conversation."
-        ))
+        try:
+            lat, lon = float(parts[1]), float(parts[2])
+        except ValueError:
+            return ("error", f"[{COORDS_USAGE}]")
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return ("error", "[coordinates out of range: lat -90..90, lon -180..180]")
+        return ("coords", (lat, lon))
     return ("error", f"[unknown command: {cmd}] type /help")
 
 
@@ -231,10 +258,11 @@ def run_cli():
             if kind == "error":
                 print(payload)
                 continue
-            if kind == "send":
-                # /coords: send the rewritten message to the model below
-                user = payload
-                print("[location noted]")
+            if kind == "coords":
+                lat, lon = payload
+                set_location(thread_id, lat, lon)
+                print(f"[location pinned to {lat}, {lon} — where_am_i will use this]")
+                continue
 
         print("bot> ", end="")
         try:

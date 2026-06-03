@@ -135,8 +135,16 @@ def handle_send_message(data):
         emit('assistant_done', {'content': info, 'markdown': False}, room=active_chat.thread_id)
         return
 
-    # /coords -> show the literal command but feed the rewritten text to the model.
-    model_input = payload if kind == 'send' else content
+    if kind == 'coords':
+        # Pin the location server-side; where_am_i() will return it from now on.
+        lat, lon = payload
+        emergency.set_location(active_chat.thread_id, lat, lon)
+        emit('user_message', {'content': content}, room=active_chat.thread_id)
+        emit('assistant_done', {
+            'content': f"Position fixée : {lat}, {lon}. Je l'utiliserai pour cette conversation.",
+            'markdown': False,
+        }, room=active_chat.thread_id)
+        return
 
     db.session.add(Message(chat_id=active_chat.id, role='user', content=content))
     db.session.commit()
@@ -146,7 +154,7 @@ def handle_send_message(data):
     reply_parts = []
 
     try:
-        for chunk_text in emergency.iter_response_tokens(model_input, active_chat.thread_id):
+        for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id):
             reply_parts.append(chunk_text)
             emit('assistant_delta', {'content': chunk_text}, room=active_chat.thread_id)
 
