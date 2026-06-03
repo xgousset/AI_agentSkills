@@ -16,11 +16,16 @@
     {% if chat_list %}
         <div class="conversation-list">
             {% for chat in chat_list %}
-                <a class="conversation-card" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
-                    <span class="conversation-label">Conversation</span>
-                    <strong>{{ chat.thread_id }}</strong>
-                    <span class="conversation-link">Ouvrir</span>
-                </a>
+                <div class="conversation-card-row">
+                    <a class="conversation-card" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
+                        <span class="conversation-label">Conversation</span>
+                        <strong>{{ chat.title or chat.thread_id[:8] }}</strong>
+                        <span class="conversation-link">Ouvrir</span>
+                    </a>
+                    <form class="conversation-actions" method="post" action="{{ url_for('delete_chat', chat_id=chat.thread_id) }}" onsubmit="return confirm('Supprimer cette conversation ?');">
+                        <button class="button button-danger" type="submit">Supprimer</button>
+                    </form>
+                </div>
             {% endfor %}
         </div>
     {% else %}

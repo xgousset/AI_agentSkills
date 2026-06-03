@@ -6,11 +6,18 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Conversation active</p>
-            <h1>{{ active_chat.thread_id }}</h1>
+            <h1>{{ active_chat.title or active_chat.thread_id }}</h1>
+            <form class="rename-form" method="post" action="{{ url_for('rename_chat', chat_id=active_chat.thread_id) }}">
+                <input type="text" name="title" value="{{ active_chat.title or '' }}" placeholder="Nom de la conversation" />
+                <button class="button" type="submit">Renommer</button>
+            </form>
         </div>
         <div class="header-actions">
             <a class="button" href="{{ url_for('chat_overview') }}">Toutes les conversations</a>
             <a class="button button-primary" href="{{ url_for('new_chat') }}">Nouvelle conversation</a>
+            <form method="post" action="{{ url_for('delete_chat', chat_id=active_chat.thread_id) }}" onsubmit="return confirm('Supprimer cette conversation ?');" style="display:inline;margin-left:8px;">
+                <button class="button button-danger" type="submit">Supprimer</button>
+            </form>
         </div>
     </div>
 {% endblock %}
@@ -22,7 +29,7 @@
             <div class="sidebar-list">
                 {% for chat in chat_list %}
                     <a class="sidebar-item{% if chat.thread_id == active_chat.thread_id %} is-active{% endif %}" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
-                        {{ chat.thread_id }}
+                        {{ chat.title or chat.thread_id[:8] }}
                     </a>
                 {% endfor %}
             </div>

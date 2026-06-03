@@ -1,9 +1,9 @@
 from uuid import uuid4
 
-from flask import Flask, abort, redirect, render_template, url_for
+from flask import Flask, abort, redirect, render_template, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from flask_socketio import SocketIO, emit, join_room
 
@@ -27,6 +27,7 @@ class Chat(db.Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     thread_id: Mapped[str] = mapped_column(unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(nullable=True)
     messages: Mapped[list['Message']] = relationship(
         back_populates='chat',
         cascade='all, delete-orphan',
@@ -47,6 +48,19 @@ class Message(db.Model):
 with app.app_context():
     db.create_all()
 
+    # Lightweight migration: add `title` column to `chats` if missing
+    try:
+        pragma = db.session.execute(text("PRAGMA table_info('chats')")).fetchall()
+        has_title = any(row[1] == 'title' for row in pragma)
+        if not has_title:
+            db.session.execute(text("ALTER TABLE chats ADD COLUMN title TEXT"))
+            db.session.commit()
+            # populate default titles for existing rows
+            db.session.execute(text("UPDATE chats SET title = 'Conversation ' || substr(thread_id,1,8) WHERE title IS NULL"))
+            db.session.commit()
+    except Exception as exc:
+        print('DB migration skipped or failed:', exc)
+
 
 def get_all_chats():
     return Chat.query.order_by(Chat.id.desc()).all()
@@ -56,8 +70,10 @@ def get_chat_by_thread_id(thread_id):
     return Chat.query.filter_by(thread_id=thread_id).first()
 
 
-def create_chat():
-    chat = Chat(thread_id=str(uuid4()))
+def create_chat(title: str | None = None):
+    thread = str(uuid4())
+    default_title = title or f"Conversation {thread[:8]}"
+    chat = Chat(thread_id=thread, title=default_title)
     db.session.add(chat)
     db.session.commit()
     return chat
@@ -130,6 +146,31 @@ def chat_overview():
 def new_chat():
     chat = create_chat()
     return redirect(url_for('chat', chat_id=chat.thread_id))
+
+
+@app.route('/chat/<chat_id>/rename', methods=['POST'])
+def rename_chat(chat_id):
+    new_title = (request.form or {}).get('title', '').strip()
+    active_chat = get_chat_by_thread_id(chat_id)
+    if active_chat is None:
+        abort(404)
+
+    if new_title:
+        active_chat.title = new_title
+        db.session.commit()
+
+    return redirect(url_for('chat', chat_id=active_chat.thread_id))
+
+
+@app.route('/chat/<chat_id>/delete', methods=['POST'])
+def delete_chat(chat_id):
+    active_chat = get_chat_by_thread_id(chat_id)
+    if active_chat is None:
+        abort(404)
+
+    db.session.delete(active_chat)
+    db.session.commit()
+    return redirect(url_for('chat_overview'))
 
 
 @app.route('/chat/<chat_id>')

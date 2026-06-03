@@ -24,3 +24,7 @@ __pycache__/
 # Chat memory checkpoint (CHAT_DB)
 *.db-*
 checkpoint.db
+
+# launchers
+run.sh
+run.bat
