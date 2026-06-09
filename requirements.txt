@@ -1,0 +1,5 @@
+uuid
+flask
+flask_socketio
+flask_sqlalchemy
+

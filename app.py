@@ -100,6 +100,7 @@ def handle_join_chat(data):
 def handle_send_message(data):
     chat_id = (data or {}).get('chat_id', '').strip()
     content = (data or {}).get('message', '').strip()
+    model_key = (data or {}).get('model', 'qwen').strip()
 
     if not chat_id or not content:
         emit('chat_error', {'message': 'Message vide ou conversation manquante.'})
@@ -120,7 +121,7 @@ def handle_send_message(data):
     reply_parts = []
 
     try:
-        for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id):
+        for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id, model_key=model_key):
             reply_parts.append(chunk_text)
             emit('assistant_delta', {'content': chunk_text}, room=active_chat.thread_id)
 

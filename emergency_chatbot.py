@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessageChunk
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 # LLM provider (Ollama)
 from langchain_ollama import ChatOllama
@@ -32,21 +34,24 @@ def make_checkpointer():
 
 load_dotenv()
 
-backend = os.getenv("LLM_BACKEND", "ollama").strip()
+# Pick memory backend (in-memory, or persistent if CHAT_DB is set)
+checkpointer = make_checkpointer()
 
-if backend != "ollama":
-    raise ValueError(f"Unknown backend: {backend}")
+# Available models (Restricted to tool-compatible models for stability)
+AVAILABLE_MODELS = {
+    "qwen": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
+    "mistral": "mistral:latest"
+}
 
-# Create the LLM (Ollama) - same config as main_agent.py
-llm = ChatOllama(
-    model=os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
-    temperature=0
-)
+# Cache for agents to avoid recreating them
+_agent_cache = {}
+
+def get_llm(model_key="qwen"):
+    model_name = AVAILABLE_MODELS.get(model_key, AVAILABLE_MODELS["qwen"])
+    return ChatOllama(model=model_name, temperature=0)
 
 # Reuse the project's real skill scripts (single source of truth)
-# Load each script module by path so the .gemini/skills/ scripts stay the only copy.
 SKILLS = os.path.join(os.path.dirname(__file__), ".gemini", "skills")
-
 
 def _load(skill, script):
     path = os.path.join(SKILLS, skill, "scripts", script)
@@ -60,17 +65,16 @@ _shelters = _load("survival-strategist", "find_shelters.py")
 _resources = _load("resource-inventory", "find_resources.py")
 _weather = _load("fallout-predictor", "get_weather.py")
 
-
-# Tools: thin wrappers that summarize so the model isn't flooded with raw JSON
 @tool
 def where_am_i() -> dict:
     """Get the user's current location (latitude, longitude, city) from their public IP.
     Call this FIRST whenever you need coordinates and the user has not given them."""
-    return _location.get_location()
-
+    loc = _location.get_location()
+    if "error" in loc:
+        return {"error": "Impossible de déterminer votre position automatiquement. Veuillez fournir votre ville ou vos coordonnées."}
+    return loc
 
 def _summarize_pois(data, radius_km):
-    """Turn raw Overpass JSON into a short text summary (count + first few names)."""
     if not isinstance(data, dict) or "elements" not in data:
         return f"No data (got: {data})"
     elements = data["elements"]
@@ -84,13 +88,11 @@ def _summarize_pois(data, radius_km):
         lines.append(f"- {name} [{kind}]{coords}")
     return "\n".join(lines)
 
-
 @tool
 def find_shelters(lat: float, lon: float, radius_km: int = 20) -> str:
     """Find public shelters near coordinates: bomb/nuclear shelters, underground parkings,
     subway stations, hospitals/universities/government buildings. Use during a nuclear emergency."""
     return _summarize_pois(_shelters.get_shelters(lat, lon, radius_km), radius_km)
-
 
 @tool
 def find_supplies(lat: float, lon: float, radius_km: int = 5) -> str:
@@ -98,102 +100,106 @@ def find_supplies(lat: float, lon: float, radius_km: int = 5) -> str:
     and drinking-water points. Use when the user asks about supplies, food, water or medicine."""
     return _summarize_pois(_resources.get_resources(lat, lon, radius_km), radius_km)
 
-
 @tool
 def wind_forecast(lat: float, lon: float) -> dict:
     """Get current wind (surface + altitude layers) to predict which direction radioactive
     fallout would drift. Use when the user asks about fallout direction, wind, or where it's safe."""
     return _weather.get_wind_data(lat, lon)
 
-
 tools = [where_am_i, find_shelters, find_supplies, wind_forecast]
 
-# Pick memory backend (in-memory, or persistent if CHAT_DB is set)
-checkpointer = make_checkpointer()
+def get_agent(model_key="qwen"):
+    if model_key not in _agent_cache:
+        llm = get_llm(model_key)
+        
+        # Specific prompt tuning for Mistral if needed, otherwise general
+        prompt_text = (
+            "You are a calm emergency operator assisting someone during a nuclear crisis. "
+            "Answer concisely and clearly. Always reply in the SAME language the user writes in. "
+            "If you need the user's location and they have not "
+            "given it, call where_am_i FIRST, then reuse those coordinates with the other tools. "
+            "Never invent coordinates."
+        )
+        
+        if model_key == "mistral":
+            prompt_text += " You MUST use the provided tools to get real data before answering."
 
-# Create the agent with conversational memory
-agent = create_agent(
-    model=llm,
-    tools=tools,
-    system_prompt=(
-        "You are a calm emergency operator assisting someone during a nuclear crisis. "
-        "Answer concisely and clearly. Always reply in the SAME language the user writes in. "
-        "If you need the user's location and they have not "
-        "given it, call where_am_i FIRST, then reuse those coordinates with the other tools. "
-        "Never invent coordinates."
-    ),
-    checkpointer=checkpointer,
+        _agent_cache[model_key] = create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=prompt_text,
+            checkpointer=checkpointer,
+        )
+    return _agent_cache[model_key]
+
+# --- Verification Agents ---
+
+concordance_prompt = ChatPromptTemplate.from_template(
+    "Tu es un expert en vérification de concordance. "
+    "Vérifie si la réponse de l'IA correspond à la requête de l'utilisateur.\n\n"
+    "Requête : {query}\n"
+    "Réponse : {response}\n\n"
+    "La réponse est-elle pertinente ? Réponds par OUI ou NON, puis explique brièvement pourquoi en une phrase."
 )
 
-# Chat loop
-DEFAULT_THREAD_ID = "session-1"
-thread_id = DEFAULT_THREAD_ID  # mutable: /reset starts a fresh conversation
+hallucination_prompt = ChatPromptTemplate.from_template(
+    "Tu es un expert en détection d'hallucinations. "
+    "Vérifie si la réponse suivante contient des informations inventées ou techniquement suspectes.\n\n"
+    "Réponse : {response}\n\n"
+    "Y a-t-il des hallucinations ? Réponds par AUCUNE ou DÉTECTÉE, puis explique brièvement pourquoi en une phrase."
+)
 
-def make_config(current_thread_id=None):
-    return {"configurable": {"thread_id": current_thread_id or thread_id}, "recursion_limit": 10}
+def verify_response(query, response, model_key="qwen"):
+    llm = get_llm(model_key)
+    
+    concordance_chain = concordance_prompt | llm | StrOutputParser()
+    hallucination_chain = hallucination_prompt | llm | StrOutputParser()
+    
+    concordance = concordance_chain.invoke({"query": query, "response": response})
+    hallucination = hallucination_chain.invoke({"response": response})
+    
+    return {
+        "concordance": concordance,
+        "hallucination": hallucination
+    }
 
+# --- Response Generation ---
 
-def iter_response_tokens(user_message, current_thread_id=None):
+def iter_response_tokens(user_message, current_thread_id, model_key="qwen"):
+    agent = get_agent(model_key)
+    config = {"configurable": {"thread_id": current_thread_id}, "recursion_limit": 10}
+    
+    full_response = ""
     for token, metadata in agent.stream(
         {"messages": [{"role": "user", "content": user_message}]},
         stream_mode="messages",
-        config=make_config(current_thread_id),
+        config=config,
     ):
         if isinstance(token, AIMessageChunk) and token.content:
+            full_response += token.content
             yield token.content
 
+    # Run verifications at the end
+    # We yield a separator and then the verification results
+    verif = verify_response(user_message, full_response, model_key)
+    
+    yield "\n\n--- VÉRIFICATIONS ---\n"
+    yield f"**Concordance :** {verif['concordance']}\n"
+    yield f"**Hallucination :** {verif['hallucination']}"
 
-def print_help():
-    print("Commands:")
-    print("  /help              show this help")
-    print("  /reset             start a fresh conversation (forget history)")
-    print("  /coords <lat> <lon>  set your location manually (skip IP lookup)")
-    print("  quit / exit / salir  leave")
-
+# --- CLI ---
 
 def run_cli():
-    global thread_id
-
-    print("\n=== EMERGENCY ASSISTANT (type '/help' for commands, 'quit' to exit) ===")
-    print("Try: 'Where am I and where are the nearest shelters?'")
-    print("     'And the closest pharmacies?'   /   'Which way would fallout drift?'\n")
-
+    # Simplifié pour le support multi-modèle
+    print("\n=== EMERGENCY ASSISTANT (CLI) ===")
     while True:
         user = input("you> ").strip()
-        if user.lower() in {"", "quit", "exit", "salir"}:
-            print("Stay safe.")
-            break
-
-        # --- control commands ---
-        if user.startswith("/"):
-            parts = user.split()
-            cmd = parts[0].lower()
-            if cmd == "/help":
-                print_help()
-            elif cmd == "/reset":
-                import uuid
-                thread_id = "session-" + uuid.uuid4().hex[:8]
-                print(f"[new conversation: {thread_id}]")
-            elif cmd == "/coords":
-                if len(parts) != 3:
-                    print("[usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02]")
-                else:
-                    # Feed coords to the agent as a remembered fact (uses conversation memory)
-                    user = f"My current location is latitude {parts[1]}, longitude {parts[2]}. Remember it for the rest of this conversation."
-                    print(f"[location set to {parts[1]}, {parts[2]}]")
-            else:
-                print(f"[unknown command: {cmd}] type /help")
-            if user.startswith("/"):  # command handled, nothing to send to the model
-                continue
-
+        if user.lower() in {"quit", "exit"}: break
+        
         print("bot> ", end="")
-        try:
-            for token_text in iter_response_tokens(user, thread_id):
-                print(token_text, end="", flush=True)
-            print()
-        except Exception as e:
-            print(f"\n[stopped: {type(e).__name__}] model looped without a final answer.")
-
+        for token in iter_response_tokens(user, "cli-session"):
+            print(token, end="", flush=True)
+        print()
 
 if __name__ == "__main__":
     run_cli()

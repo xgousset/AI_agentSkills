@@ -53,6 +53,16 @@
             </div>
 
             <form class="chat-form" id="chat-form">
+                <div id="thinking-indicator" style="display: none; margin-bottom: 10px; font-style: italic; color: #666;">
+                    <span class="dot-flashing"></span> L'IA réfléchit...
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label for="model-select">Modèle d'IA :</label>
+                    <select id="model-select" class="button">
+                        <option value="qwen">Qwen 2.5 (Supporte les outils)</option>
+                        <option value="mistral">Mistral (Supporte les outils)</option>
+                    </select>
+                </div>
                 <label for="message">Message</label>
                 <textarea id="message" name="message" rows="4" placeholder="Écris ton message à l'IA..."></textarea>
                 <div class="form-actions">
@@ -68,14 +78,24 @@
         const socket = io({ transports: ['websocket', 'polling'] });
         const form = document.getElementById('chat-form');
         const messageInput = document.getElementById('message');
+        const modelSelect = document.getElementById('model-select');
         const messageList = document.getElementById('message-list');
         const submitButton = form.querySelector('button[type="submit"]');
+        const thinkingIndicator = document.getElementById('thinking-indicator');
 
         let currentAssistantMessage = null;
         let assistantStreamActive = false;
 
         const scrollToBottom = () => {
             messageList.scrollTop = messageList.scrollHeight;
+        };
+
+        const setBusy = (busy) => {
+            assistantStreamActive = busy;
+            submitButton.disabled = busy;
+            messageInput.disabled = busy;
+            modelSelect.disabled = busy;
+            thinkingIndicator.style.display = busy ? 'block' : 'none';
         };
 
         const appendMessage = (role, content) => {
@@ -88,6 +108,7 @@
             label.textContent = role === 'user' ? 'Vous' : 'IA';
 
             const body = document.createElement('p');
+            body.style.whiteSpace = 'pre-wrap'; // Preserve newlines for verifications
             body.textContent = content;
 
             article.append(label, body);
@@ -102,8 +123,7 @@
 
         socket.on('chat_error', (payload) => {
             appendMessage('assistant', payload.message || 'Une erreur est survenue.');
-            assistantStreamActive = false;
-            submitButton.disabled = false;
+            setBusy(false);
         });
 
         socket.on('user_message', (payload) => {
@@ -111,7 +131,7 @@
         });
 
         socket.on('assistant_start', () => {
-            assistantStreamActive = true;
+            setBusy(true);
             currentAssistantMessage = appendMessage('assistant', '');
         });
 
@@ -133,8 +153,7 @@
             }
 
             currentAssistantMessage = null;
-            assistantStreamActive = false;
-            submitButton.disabled = false;
+            setBusy(false);
             messageInput.value = '';
             scrollToBottom();
         });
@@ -143,14 +162,16 @@
             event.preventDefault();
 
             const value = messageInput.value.trim();
+            const model = modelSelect.value;
             if (!value || assistantStreamActive) {
                 return;
             }
 
-            submitButton.disabled = true;
-            socket.emit('send_message', { chat_id: chatId, message: value });
+            setBusy(true);
+            socket.emit('send_message', { chat_id: chatId, message: value, model: model });
         });
 
         scrollToBottom();
     </script>
+
 {% endblock %}
