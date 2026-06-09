@@ -208,9 +208,43 @@ h2 {
   margin-right: auto;
 }
 
-.message p {
-  margin-bottom: 0;
+.message-body {
   white-space: pre-wrap;
+}
+
+/* Markdown-rendered replies: let block elements control spacing instead. */
+.message-body.rendered {
+  white-space: normal;
+}
+
+.message-body.rendered > :first-child {
+  margin-top: 0;
+}
+
+.message-body.rendered > :last-child {
+  margin-bottom: 0;
+}
+
+.message-body.rendered p {
+  margin: 0.4rem 0;
+}
+
+.message-body.rendered ul,
+.message-body.rendered ol {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+}
+
+.message-body.rendered pre {
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+  overflow: auto;
+}
+
+.message-body.rendered code {
+  font-family: monospace;
 }
 
 .chat-form {

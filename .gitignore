@@ -25,6 +25,9 @@ __pycache__/
 *.db-*
 checkpoint.db
 
+# Generated tool artifacts (maps, PDFs)
+instance/generated/
+
 # launchers
 run.sh
 run.bat

@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import AIMessageChunk
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableConfig
 
 # LLM provider (Ollama)
 from langchain_ollama import ChatOllama
@@ -18,13 +19,19 @@ from langgraph.checkpoint.memory import MemorySaver
 
 def make_checkpointer():
     """In-memory by default. OPTIONAL: set CHAT_DB=path.db for memory that
-    survives restarts (needs `pip install langgraph-checkpoint-sqlite`)."""
+    survives restarts (needs `pip install langgraph-checkpoint-sqlite`).
+    A relative path is resolved against this file's folder (project root) so it
+    lands in the same place regardless of the current working directory, and
+    matches Flask's instance/ folder (e.g. CHAT_DB=instance/checkpoint.db)."""
     db = os.getenv("CHAT_DB", "").strip()
     if not db:
         return MemorySaver()
+    if not os.path.isabs(db):
+        db = os.path.join(os.path.dirname(os.path.abspath(__file__)), db)
     try:
         import sqlite3
         from langgraph.checkpoint.sqlite import SqliteSaver
+        os.makedirs(os.path.dirname(db), exist_ok=True)
         conn = sqlite3.connect(db, check_same_thread=False)
         print(f"[persistent memory: {db}]")
         return SqliteSaver(conn)
@@ -65,14 +72,41 @@ _shelters = _load("survival-strategist", "find_shelters.py")
 _resources = _load("resource-inventory", "find_resources.py")
 _weather = _load("fallout-predictor", "get_weather.py")
 
+
+# Per-conversation manual location overrides set via the /coords command.
+# Keyed by thread_id. In-memory only (cleared on server restart).
+_pinned_locations = {}
+
+
+def set_location(thread_id, lat, lon):
+    """Pin a manual location for a conversation. where_am_i() will then return
+    these coordinates instead of doing IP geolocation, so the model cannot drift
+    back to the (often wrong) IP-based location."""
+    _pinned_locations[thread_id] = {"lat": lat, "lon": lon}
+
+
+def _thread_of(config):
+    """Extract the thread_id LangGraph injects into a tool's RunnableConfig."""
+    if not config:
+        return None
+    return config.get("configurable", {}).get("thread_id")
+
+
 @tool
-def where_am_i() -> dict:
-    """Get the user's current location (latitude, longitude, city) from their public IP.
+def where_am_i(config: RunnableConfig = None) -> dict:
+    """Get the user's current location (latitude, longitude, city). Returns the
+    location the user pinned with /coords if set, otherwise their public-IP location.
     Call this FIRST whenever you need coordinates and the user has not given them."""
+    pinned = _pinned_locations.get(_thread_of(config))
+    if pinned:
+        return {"lat": pinned["lat"], "lon": pinned["lon"],
+                "city": None, "source": "user-set (/coords)"}
+    
     loc = _location.get_location()
     if "error" in loc:
         return {"error": "Impossible de déterminer votre position automatiquement. Veuillez fournir votre ville ou vos coordonnées."}
     return loc
+
 
 def _summarize_pois(data, radius_km):
     if not isinstance(data, dict) or "elements" not in data:
@@ -107,6 +141,15 @@ def wind_forecast(lat: float, lon: float) -> dict:
     return _weather.get_wind_data(lat, lon)
 
 tools = [where_am_i, find_shelters, find_supplies, wind_forecast]
+
+# Optional extra tools (more skills). Fully isolated: if extra_tools.py is deleted
+# or fails to import, we just keep the 4 base tools above — nothing else breaks.
+try:
+    from extra_tools import EXTRA_TOOLS
+    tools += EXTRA_TOOLS
+    print(f"[extra tools loaded: {[t.name for t in EXTRA_TOOLS]}]")
+except Exception as e:
+    print(f"[extra tools disabled: {e}]")
 
 def get_agent(model_key="qwen"):
     if model_key not in _agent_cache:
@@ -187,17 +230,87 @@ def iter_response_tokens(user_message, current_thread_id, model_key="qwen"):
     yield f"**Concordance :** {verif['concordance']}\n"
     yield f"**Hallucination :** {verif['hallucination']}"
 
-# --- CLI ---
+
+COORDS_USAGE = "usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02"
+
+
+def new_thread_id():
+    """Generate a fresh conversation id (used by /reset and the web 'new chat')."""
+    import uuid
+    return "session-" + uuid.uuid4().hex[:8]
+
+
+def parse_command(text):
+    """Parse a leading /command into a UI-agnostic intent so both the CLI and the
+    web layer share the exact same behavior.
+
+    Returns (kind, payload):
+      ("none",   None)          -> not a command; send `text` to the model as-is
+      ("help",   None)          -> caller should show help
+      ("reset",  None)          -> caller should start a fresh conversation
+      ("coords", (lat, lon))    -> caller should pin this location (floats)
+      ("error",  message)       -> caller should show this usage/error message
+    """
+    if not text.startswith("/"):
+        return ("none", None)
+    parts = text.split()
+    cmd = parts[0].lower()
+    if cmd == "/help":
+        return ("help", None)
+    if cmd == "/reset":
+        return ("reset", None)
+    if cmd == "/coords":
+        if len(parts) != 3:
+            return ("error", f"[{COORDS_USAGE}]")
+        try:
+            lat, lon = float(parts[1]), float(parts[2])
+        except ValueError:
+            return ("error", f"[{COORDS_USAGE}]")
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return ("error", "[coordinates out of range: lat -90..90, lon -180..180]")
+        return ("coords", (lat, lon))
+    return ("error", f"[unknown command: {cmd}] type /help")
+
+
+def print_help():
+    print("Commands:")
+    print("  /help              show this help")
+    print("  /reset             start a fresh conversation (forget history)")
+    print("  /coords <lat> <lon>  set your location manually (skip IP lookup)")
+    print("  quit / exit / salir  leave")
+
 
 def run_cli():
     # Simplifié pour le support multi-modèle
     print("\n=== EMERGENCY ASSISTANT (CLI) ===")
+    thread_id = "cli-session"
     while True:
         user = input("you> ").strip()
-        if user.lower() in {"quit", "exit"}: break
-        
+        if user.lower() in {"", "quit", "exit", "salir"}:
+            print("Stay safe.")
+            break
+
+        # --- control commands (shared logic with the web layer) ---
+        if user.startswith("/"):
+            kind, payload = parse_command(user)
+            if kind == "help":
+                print_help()
+                continue
+            if kind == "reset":
+                thread_id = new_thread_id()
+                print(f"[new conversation: {thread_id}]")
+                continue
+            if kind == "error":
+                print(payload)
+                continue
+            if kind == "coords":
+                lat, lon = payload
+                set_location(thread_id, lat, lon)
+                print(f"[location pinned to {lat}, {lon} — where_am_i will use this]")
+                continue
+
         print("bot> ", end="")
-        for token in iter_response_tokens(user, "cli-session"):
+        for token in iter_response_tokens(user, thread_id):
             print(token, end="", flush=True)
         print()
 
