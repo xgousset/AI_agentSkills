@@ -14,5 +14,22 @@ Thumbs.db
 .env
 .env.*
 
-*.pdf
-*.png
+# Python virtualenv
+NuclearAgent/
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Chat memory checkpoint (CHAT_DB)
+*.db-*
+checkpoint.db
+
+# Generated tool artifacts (maps, PDFs)
+instance/generated/
+
+# launchers
+run.sh
+run.bat

@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat{% endblock %}
+
+{% block header %}
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Conversation active</p>
+            <h1>{{ active_chat.title or active_chat.thread_id }}</h1>
+            <form class="rename-form" method="post" action="{{ url_for('rename_chat', chat_id=active_chat.thread_id) }}">
+                <input type="text" name="title" value="{{ active_chat.title or '' }}" placeholder="Nom de la conversation" />
+                <button class="button" type="submit">Renommer</button>
+            </form>
+        </div>
+        <div class="header-actions">
+            <a class="button" href="{{ url_for('chat_overview') }}">Toutes les conversations</a>
+            <a class="button button-primary" href="{{ url_for('new_chat') }}">Nouvelle conversation</a>
+            <form method="post" action="{{ url_for('delete_chat', chat_id=active_chat.thread_id) }}" onsubmit="return confirm('Supprimer cette conversation ?');" style="display:inline;margin-left:8px;">
+                <button class="button button-danger" type="submit">Supprimer</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="chat-layout">
+        <aside class="chat-sidebar">
+            <h2>Conversations</h2>
+            <div class="sidebar-list">
+                {% for chat in chat_list %}
+                    <a class="sidebar-item{% if chat.thread_id == active_chat.thread_id %} is-active{% endif %}" href="{{ url_for('chat', chat_id=chat.thread_id) }}">
+                        {{ chat.title or chat.thread_id[:8] }}
+                    </a>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <section class="chat-panel">
+            <div class="message-list" id="message-list" data-chat-id="{{ active_chat.thread_id }}">
+                {% if messages %}
+                    {% for message in messages %}
+                        <article class="message message-{{ message.role }}" data-role="{{ message.role }}">
+                            <span class="message-role">{{ 'Vous' if message.role == 'user' else 'IA' }}</span>
+                            <div class="message-body">{{ message.content }}</div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state compact">
+                        <h2>Commence la conversation</h2>
+                        <p>Envoie un premier message pour lancer ce fil.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <form class="chat-form" id="chat-form">
+                <div id="thinking-indicator" style="display: none; margin-bottom: 10px; font-style: italic; color: #666;">
+                    <span class="dot-flashing"></span> L'IA réfléchit...
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label for="model-select">Modèle d'IA :</label>
+                    <select id="model-select" class="button">
+                        <option value="qwen">Qwen 2.5 (Supporte les outils)</option>
+                        <option value="mistral">Mistral (Supporte les outils)</option>
+                    </select>
+                </div>
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="4" placeholder="Écris ton message à l'IA..."></textarea>
+                <div class="form-actions">
+                    <button class="button button-primary" type="submit">Envoyer</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script>
+        const chatId = document.getElementById('message-list').dataset.chatId;
+        const socket = io({ transports: ['websocket', 'polling'] });
+        const form = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message');
+        const modelSelect = document.getElementById('model-select');
+        const messageList = document.getElementById('message-list');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const thinkingIndicator = document.getElementById('thinking-indicator');
+
+        let currentAssistantMessage = null;
+        let assistantStreamActive = false;
+        let assistantBuffer = '';
+
+        // Render markdown safely (DOMPurify guards against any HTML injection).
+        const markdownToHtml = (text) => DOMPurify.sanitize(marked.parse(text || ''));
+
+        const scrollToBottom = () => {
+            messageList.scrollTop = messageList.scrollHeight;
+        };
+
+        const setBusy = (busy) => {
+            assistantStreamActive = busy;
+            submitButton.disabled = busy;
+            messageInput.disabled = busy;
+            modelSelect.disabled = busy;
+            thinkingIndicator.style.display = busy ? 'block' : 'none';
+        };
+
+        const setBody = (body, content, useMarkdown) => {
+            if (useMarkdown) {
+                body.classList.add('rendered');
+                body.innerHTML = markdownToHtml(content);
+            } else {
+                body.classList.remove('rendered');
+                body.textContent = content;
+            }
+        };
+
+        const appendMessage = (role, content, useMarkdown = false) => {
+            const article = document.createElement('article');
+            article.className = `message message-${role}`;
+            article.dataset.role = role;
+
+            const label = document.createElement('span');
+            label.className = 'message-role';
+            label.textContent = role === 'user' ? 'Vous' : 'IA';
+
+            const body = document.createElement('div');
+            body.className = 'message-body';
+            setBody(body, content, useMarkdown);
+
+            article.append(label, body);
+            messageList.appendChild(article);
+            scrollToBottom();
+            return article;
+        };
+
+        socket.on('connect', () => {
+            socket.emit('join_chat', { chat_id: chatId });
+        });
+
+        // Don't leave the UI stuck if the connection drops mid-stream.
+        socket.on('disconnect', () => {
+            setBusy(false);
+        });
+
+        socket.on('chat_error', (payload) => {
+            appendMessage('assistant', payload.message || 'Une erreur est survenue.');
+            setBusy(false);
+        });
+
+        socket.on('user_message', (payload) => {
+            appendMessage('user', payload.content || '');
+        });
+
+        socket.on('assistant_start', () => {
+            setBusy(true);
+            assistantBuffer = '';
+            currentAssistantMessage = appendMessage('assistant', '');
+        });
+
+        socket.on('assistant_delta', (payload) => {
+            if (!currentAssistantMessage) {
+                assistantBuffer = '';
+                currentAssistantMessage = appendMessage('assistant', '');
+            }
+            // Show raw text while streaming; render markdown once the reply is complete.
+            assistantBuffer += payload.content || '';
+            currentAssistantMessage.querySelector('.message-body').textContent = assistantBuffer;
+            scrollToBottom();
+        });
+
+        socket.on('assistant_done', (payload) => {
+            const useMarkdown = payload.markdown !== false;
+            const finalText = (payload.content !== undefined && payload.content !== null)
+                ? payload.content
+                : assistantBuffer;
+
+            if (!currentAssistantMessage) {
+                currentAssistantMessage = appendMessage('assistant', finalText, useMarkdown);
+            } else {
+                setBody(currentAssistantMessage.querySelector('.message-body'), finalText, useMarkdown);
+            }
+
+            currentAssistantMessage = null;
+            assistantBuffer = '';
+            setBusy(false);
+            messageInput.value = '';
+            scrollToBottom();
+        });
+
+        const sendMessage = () => {
+            const value = messageInput.value.trim();
+            const model = modelSelect.value;
+            if (!value || assistantStreamActive) {
+                return;
+            }
+
+            setBusy(true);
+            socket.emit('send_message', { chat_id: chatId, message: value, model: model });
+            messageInput.value = '';
+        };
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            sendMessage();
+        });
+
+        // Enter sends; Shift+Enter inserts a newline.
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Render the assistant history (server-sent as plain text) as markdown.
+        document.querySelectorAll('.message-assistant .message-body').forEach((el) => {
+            const raw = el.textContent;
+            el.classList.add('rendered');
+            el.innerHTML = markdownToHtml(raw);
+        });
+
+        scrollToBottom();
+    </script>
+
+{% endblock %}

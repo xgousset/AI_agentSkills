@@ -1,25 +1,31 @@
-""" LCEL : composer prompt | llm | parser avec l’opé rateur pipe ."""
+"""LCEL : composer prompt | llm | parser avec l’opérateur pipe."""
 import os
 from dotenv import load_dotenv
-from langchain_core . prompts import ChatPromptTemplate
-from langchain_core . output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
-load_dotenv ()
-backend = os . getenv (" LLM_BACKEND ", " else ")
+load_dotenv()
 
-if backend == " mistral ":
-    from langchain_mistralai import ChatMistralAI
-    llm = ChatMistralAI ( model =" mistral -small - latest ", temperature =0.7)
-else :
+backend = os.getenv("LLM_BACKEND", "ollama").strip()
+
+if backend == "ollama":
     from langchain_ollama import ChatOllama
-    llm = ChatOllama ( model = os . getenv (" OLLAMA_MODEL ", " llama2-uncensored") , temperature =0.7)
+    llm = ChatOllama(
+        model=os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
+        temperature=0.7
+    )
+else:
+    from langchain_mistralai import ChatMistralAI
+    llm = ChatMistralAI(model="mistral-small-latest", temperature=0.7)
 
-prompt = ChatPromptTemplate . from_template (
-" Raconte -moi une blague courte sur le sujet : { sujet }"
+
+prompt = ChatPromptTemplate.from_template(
+    "Raconte-moi une blague courte sur le sujet : {sujet}"
 )
 
-chain = prompt | llm | StrOutputParser ()
+# LCEL chain
+chain = prompt | llm | StrOutputParser()
 
-for sujet in [" les pompiers ", " les data scientists "]:
-    print (f" --- { sujet } ---")
-    print ( chain . invoke ({" sujet ": sujet }) )
+for sujet in ["les pompiers", "les data scientists"]:
+    print(f"--- {sujet} ---")
+    print(chain.invoke({"sujet": sujet}))
