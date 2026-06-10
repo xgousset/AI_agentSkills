@@ -55,16 +55,21 @@ AVAILABLE_MODELS = {
 # Cache for agents to avoid recreating them
 _agent_cache = {}
 
+# Ollama endpoint. Unset -> None -> the ollama client's default (http://127.0.0.1:11434),
+# so the common local case — including Ollama in Docker with -p 11434:11434 — needs no
+# config. Set OLLAMA_HOST to reach a remote/other-host daemon (e.g. http://ollama:11434).
+OLLAMA_HOST = os.getenv("OLLAMA_HOST") or None
+
 def get_llm(model_key="qwen"):
     model_name = AVAILABLE_MODELS.get(model_key, AVAILABLE_MODELS["qwen"])
-    return ChatOllama(model=model_name, temperature=0)
+    return ChatOllama(model=model_name, temperature=0, base_url=OLLAMA_HOST)
 
 # Verification always runs on a small, fast model — decoupled from whichever model
 # answered — so judging never dominates latency when answering with a larger model.
 VERIFIER_MODEL = os.getenv("VERIFIER_MODEL", "qwen2.5:3b")
 
 def get_verifier_llm():
-    return ChatOllama(model=VERIFIER_MODEL, temperature=0)
+    return ChatOllama(model=VERIFIER_MODEL, temperature=0, base_url=OLLAMA_HOST)
 
 # Reuse the project's real skill scripts (single source of truth)
 SKILLS = os.path.join(os.path.dirname(__file__), ".gemini", "skills")

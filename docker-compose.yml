@@ -1,0 +1,32 @@
+# Ollama in Docker for the web chatbot.
+#
+# The Flask app runs on the HOST (python app.py) and reaches this container at
+# localhost:11434 — no app config needed. See WEBAPP.md for the full guide.
+#
+#   docker compose up -d
+#   docker compose exec ollama ollama pull qwen2.5:3b   # pull a model INTO the container
+#
+# CPU-only by default. For an NVIDIA GPU, uncomment the `deploy:` block below
+# (requires the nvidia-container-toolkit on the host).
+# AMD GPU (ROCm): change the image to `ollama/ollama:rocm` (no `deploy:` block needed).
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    # # NVIDIA GPU — requires the nvidia-container-toolkit on the host.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ollama:

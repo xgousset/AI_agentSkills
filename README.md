@@ -4,6 +4,8 @@ An autonomous agent for the **Gemini CLI** that delivers survival intelligence d
 
 The agent contract — tone, safety priority, data requirements, operational workflow — is defined in [`GEMINI.md`](./GEMINI.md). This repository implements that contract as a set of **23 specialized skills** under `.gemini/skills/`.
 
+> **Web chatbot (Flask + Ollama):** besides the Gemini CLI skills, this repo includes a local web chat that wraps the skills as tools and runs them through a local LLM. To install and run it (Linux/Windows, Ollama native or in Docker), see **[`WEBAPP.md`](./WEBAPP.md)**.
+
 ---
 
 ## How it works
