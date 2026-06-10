@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.gemini/skills/fallout-predictor/assets/*
+__pycache__
 
 # Build artifacts
 *.skill
