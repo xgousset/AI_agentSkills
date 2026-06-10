@@ -16,7 +16,8 @@ ollama==0.6.2
 langgraph==1.2.2
 langgraph-checkpoint-sqlite==3.1.0
 
-# Skill scripts 
+# Skill scripts
 requests==2.34.2
 matplotlib==3.10.9
 fpdf==1.7.2
+staticmap==0.5.7
