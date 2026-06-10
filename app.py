@@ -153,6 +153,7 @@ def handle_send_message(data):
     emit('user_message', {'content': content}, room=active_chat.thread_id)
     emit('assistant_start', room=active_chat.thread_id)
     reply_parts = []
+    failed = False
 
     try:
         for chunk_text in emergency.iter_response_tokens(content, active_chat.thread_id, model_key=model_key):
@@ -161,11 +162,24 @@ def handle_send_message(data):
 
         reply_text = ''.join(reply_parts).strip() or 'Je n\'ai pas de réponse pour le moment.'
     except Exception as exc:
+        failed = True
         reply_text = f"L'assistant IA est indisponible pour le moment ({type(exc).__name__})."
 
     db.session.add(Message(chat_id=active_chat.id, role='assistant', content=reply_text))
     db.session.commit()
     emit('assistant_done', {'content': reply_text}, room=active_chat.thread_id)
+
+    # Verification runs AFTER the answer and is emitted as its own, non-persisted
+    # event so it never pollutes the saved message. Fail-open: never break the chat.
+    if not failed:
+        try:
+            verif = emergency.verify_response(content, reply_text)
+            emit('verification', {
+                'concordance': verif['concordance'],
+                'hallucination': verif['hallucination'],
+            }, room=active_chat.thread_id)
+        except Exception as exc:
+            print('verification skipped:', exc)
 
 @app.route('/')
 def hello():

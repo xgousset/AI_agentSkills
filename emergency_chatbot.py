@@ -46,7 +46,9 @@ checkpointer = make_checkpointer()
 
 # Available models (Restricted to tool-compatible models for stability)
 AVAILABLE_MODELS = {
-    "qwen": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
+    "qwen": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),   # actuel (téléchargé)
+    "qwen7b": "qwen2.5:7b-instruct",                   # recommandé — moins d'hallucinations
+    "qwen3": "qwen3:4b",                               # plus rapide que 7B, meilleur que 3B
     "mistral": "mistral:latest"
 }
 
@@ -56,6 +58,13 @@ _agent_cache = {}
 def get_llm(model_key="qwen"):
     model_name = AVAILABLE_MODELS.get(model_key, AVAILABLE_MODELS["qwen"])
     return ChatOllama(model=model_name, temperature=0)
+
+# Verification always runs on a small, fast model — decoupled from whichever model
+# answered — so judging never dominates latency when answering with a larger model.
+VERIFIER_MODEL = os.getenv("VERIFIER_MODEL", "qwen2.5:3b")
+
+def get_verifier_llm():
+    return ChatOllama(model=VERIFIER_MODEL, temperature=0)
 
 # Reuse the project's real skill scripts (single source of truth)
 SKILLS = os.path.join(os.path.dirname(__file__), ".gemini", "skills")
@@ -161,9 +170,19 @@ def get_agent(model_key="qwen"):
             "Answer concisely and clearly. Always reply in the SAME language the user writes in. "
             "If you need the user's location and they have not "
             "given it, call where_am_i FIRST, then reuse those coordinates with the other tools. "
-            "Never invent coordinates."
+            "Never invent coordinates.\n"
+            "GROUNDING RULES (critical):\n"
+            "- Base every factual claim (location, coordinates, distances, radiation, wind, "
+            "medical or safety steps) on the output of a tool. Never invent numbers, place "
+            "names, or instructions.\n"
+            "- For medical questions, decontamination, or radiation-exposure symptoms, call "
+            "decontamination_and_radiation_health and relay its steps.\n"
+            "- For panic, anxiety, or trouble breathing, call calming_exercise and guide the "
+            "user through it.\n"
+            "- If you have no tool data to support an answer, say so or call the relevant tool "
+            "instead of guessing."
         )
-        
+
         if model_key == "mistral":
             prompt_text += " You MUST use the provided tools to get real data before answering."
 
@@ -192,9 +211,11 @@ hallucination_prompt = ChatPromptTemplate.from_template(
     "Y a-t-il des hallucinations ? Réponds par AUCUNE ou DÉTECTÉE, puis explique brièvement pourquoi en une phrase."
 )
 
-def verify_response(query, response, model_key="qwen"):
-    llm = get_llm(model_key)
-    
+def verify_response(query, response):
+    # Always judge with the small/fast verifier model, regardless of which model
+    # produced the answer, so verification stays cheap even behind a 7B.
+    llm = get_verifier_llm()
+
     concordance_chain = concordance_prompt | llm | StrOutputParser()
     hallucination_chain = hallucination_prompt | llm | StrOutputParser()
     
@@ -209,26 +230,19 @@ def verify_response(query, response, model_key="qwen"):
 # --- Response Generation ---
 
 def iter_response_tokens(user_message, current_thread_id, model_key="qwen"):
+    """Stream ONLY the assistant's answer tokens. Verification is run separately
+    by the caller (verify_response) and surfaced out-of-band, so it never lands
+    inside the saved message."""
     agent = get_agent(model_key)
     config = {"configurable": {"thread_id": current_thread_id}, "recursion_limit": 10}
-    
-    full_response = ""
+
     for token, metadata in agent.stream(
         {"messages": [{"role": "user", "content": user_message}]},
         stream_mode="messages",
         config=config,
     ):
         if isinstance(token, AIMessageChunk) and token.content:
-            full_response += token.content
             yield token.content
-
-    # Run verifications at the end
-    # We yield a separator and then the verification results
-    verif = verify_response(user_message, full_response, model_key)
-    
-    yield "\n\n--- VÉRIFICATIONS ---\n"
-    yield f"**Concordance :** {verif['concordance']}\n"
-    yield f"**Hallucination :** {verif['hallucination']}"
 
 
 COORDS_USAGE = "usage: /coords <lat> <lon>   e.g. /coords 47.24 6.02"
@@ -310,9 +324,19 @@ def run_cli():
                 continue
 
         print("bot> ", end="")
+        answer = ""
         for token in iter_response_tokens(user, thread_id):
+            answer += token
             print(token, end="", flush=True)
         print()
+
+        # Verification runs separately so it never pollutes the answer itself.
+        try:
+            verif = verify_response(user, answer)
+            print(f"  [Concordance] {verif['concordance']}")
+            print(f"  [Hallucination] {verif['hallucination']}")
+        except Exception as e:
+            print(f"  [verification skipped: {type(e).__name__}]")
 
 if __name__ == "__main__":
     run_cli()

@@ -39,6 +39,14 @@ def _load(skill, script):
     return module
 
 
+def _read_reference(skill, filename):
+    """Read a skill's vetted reference doc (.gemini/skills/<skill>/references/<filename>).
+    Raises if missing so the caller's try/except disables only that tool."""
+    path = os.path.join(SKILLS, skill, "references", filename)
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
 def _summarize_elements(data, label):
     """Compact summary for raw Overpass JSON, to avoid flooding the model."""
     if not isinstance(data, dict) or "elements" not in data:
@@ -213,6 +221,39 @@ try:
     EXTRA_TOOLS.append(emergency_pdf)
 except Exception as e:
     print(f"[tool 'emergency_pdf' disabled: {e}]")
+
+
+# health-advisor (reference doc): grounded medical / decontamination protocol
+try:
+    @tool
+    def decontamination_and_radiation_health() -> str:
+        """Return the vetted nuclear/radiological MEDICAL protocol: triage,
+        decontamination (remove outer clothing, lukewarm water, no scrubbing),
+        Acute Radiation Syndrome phases and dose indicators (time-to-vomiting),
+        countermeasures (potassium iodide / KI, Prussian Blue, DTPA), and radiation
+        burns. Call this for ANY question about radiation exposure, contamination,
+        decontamination, nausea/vomiting after exposure, KI, or radiation symptoms,
+        then relay these steps. Do not invent medical advice."""
+        return _read_reference("health-advisor", "protocols_medical.md")
+
+    EXTRA_TOOLS.append(decontamination_and_radiation_health)
+except Exception as e:
+    print(f"[tool 'decontamination_and_radiation_health' disabled: {e}]")
+
+
+# psych-counselor (reference doc): grounded panic / anxiety first aid
+try:
+    @tool
+    def calming_exercise() -> str:
+        """Return the vetted Psychological First Aid protocol: the 5-4-3-2-1
+        grounding technique, 4-7-8 breathing, and crisis communication principles.
+        Call this whenever the user is panicking, anxious, hyperventilating, can't
+        breathe, or asks to be calmed down, then guide them through it."""
+        return _read_reference("psych-counselor", "pfa_protocols.md")
+
+    EXTRA_TOOLS.append(calming_exercise)
+except Exception as e:
+    print(f"[tool 'calming_exercise' disabled: {e}]")
 
 
 if __name__ == "__main__":

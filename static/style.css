@@ -247,6 +247,33 @@ h2 {
   font-family: monospace;
 }
 
+/* Verification box: shown under an assistant reply, never saved to the message. */
+.verify-box {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.03);
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.verify-box .verify-title {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.3rem;
+  color: var(--muted);
+}
+
+.verify-box.verify-warn {
+  border-color: rgba(154, 107, 0, 0.4);
+  background: rgba(154, 107, 0, 0.08);
+  color: #7a5600;
+}
+
 .chat-form {
   padding: 1rem;
   border-top: 1px solid var(--border);

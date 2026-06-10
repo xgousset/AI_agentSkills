@@ -59,8 +59,10 @@
                 <div style="margin-bottom: 10px;">
                     <label for="model-select">Modèle d'IA :</label>
                     <select id="model-select" class="button">
-                        <option value="qwen">Qwen 2.5 (Supporte les outils)</option>
-                        <option value="mistral">Mistral (Supporte les outils)</option>
+                        <option value="qwen">Qwen 2.5 3B — rapide (actuel)</option>
+                        <option value="qwen7b">Qwen 2.5 7B — recommandé, moins d'hallucinations</option>
+                        <option value="qwen3">Qwen 3 4B — rapide+, meilleur que 3B</option>
+                        <option value="mistral">Mistral 7B</option>
                     </select>
                 </div>
                 <label for="message">Message</label>
@@ -86,6 +88,7 @@
         const thinkingIndicator = document.getElementById('thinking-indicator');
 
         let currentAssistantMessage = null;
+        let lastAssistantMessage = null;
         let assistantStreamActive = false;
         let assistantBuffer = '';
 
@@ -180,10 +183,48 @@
                 setBody(currentAssistantMessage.querySelector('.message-body'), finalText, useMarkdown);
             }
 
+            lastAssistantMessage = currentAssistantMessage;
             currentAssistantMessage = null;
             assistantBuffer = '';
             setBusy(false);
             messageInput.value = '';
+            scrollToBottom();
+        });
+
+        // Verification arrives out-of-band, after the answer. It is NOT persisted:
+        // we attach a separate box under the last reply (never inside .message-body).
+        socket.on('verification', (payload) => {
+            const target = lastAssistantMessage;
+            if (!target) return;
+
+            const existing = target.querySelector('.verify-box');
+            if (existing) existing.remove();
+
+            const conc = (payload.concordance || '').trim();
+            const hallu = (payload.hallucination || '').trim();
+
+            const box = document.createElement('div');
+            box.className = 'verify-box';
+            // Light coloring when a problem looks flagged.
+            if (/\bnon\b/i.test(conc) || /détect|detect/i.test(hallu)) {
+                box.classList.add('verify-warn');
+            }
+
+            const title = document.createElement('span');
+            title.className = 'verify-title';
+            title.textContent = 'Vérification';
+
+            // Model text goes through createTextNode → no HTML injection possible.
+            const line1 = document.createElement('div');
+            line1.innerHTML = '<strong>Concordance :</strong> ';
+            line1.appendChild(document.createTextNode(conc));
+
+            const line2 = document.createElement('div');
+            line2.innerHTML = '<strong>Hallucination :</strong> ';
+            line2.appendChild(document.createTextNode(hallu));
+
+            box.append(title, line1, line2);
+            target.appendChild(box);
             scrollToBottom();
         });
 
