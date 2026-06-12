@@ -101,6 +101,10 @@ WEB_HELP = (
     "Commandes disponibles :\n"
     "• /coords <lat> <lon> — fixe ta position manuellement (ex : /coords 47.24 6.02)\n"
     "• /help — affiche cette aide\n"
+    "\n"
+    "Skills que l'assistant peut utiliser (demande-les en langage naturel) :\n"
+    f"{emergency.skills_help()}\n"
+    "\n"
     "Pour repartir de zéro, clique sur « Nouvelle conversation »."
 )
 

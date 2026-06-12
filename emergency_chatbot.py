@@ -17,17 +17,18 @@ from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 
 
+# Same SQLite file as the Flask chat tables; resolved against this file's
+# folder (project root) so it lands in instance/ regardless of the CWD.
+CHECKPOINT_DB = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "instance", "checkpoint.db"
+)
+
+
 def make_checkpointer():
-    """In-memory by default. OPTIONAL: set CHAT_DB=path.db for memory that
-    survives restarts (needs `pip install langgraph-checkpoint-sqlite`).
-    A relative path is resolved against this file's folder (project root) so it
-    lands in the same place regardless of the current working directory, and
-    matches Flask's instance/ folder (e.g. CHAT_DB=instance/checkpoint.db)."""
-    db = os.getenv("CHAT_DB", "").strip()
-    if not db:
-        return MemorySaver()
-    if not os.path.isabs(db):
-        db = os.path.join(os.path.dirname(os.path.abspath(__file__)), db)
+    """Persistent SQLite memory (instance/checkpoint.db), so the agent's
+    multi-turn memory survives restarts. Falls back to in-memory if SQLite
+    is unavailable."""
+    db = CHECKPOINT_DB
     try:
         import sqlite3
         from langgraph.checkpoint.sqlite import SqliteSaver
@@ -36,12 +37,12 @@ def make_checkpointer():
         print(f"[persistent memory: {db}]")
         return SqliteSaver(conn)
     except Exception as e:
-        print(f"[CHAT_DB set but persistent memory unavailable ({e}); using in-memory]")
+        print(f"[persistent memory unavailable ({e}); using in-memory]")
         return MemorySaver()
 
 load_dotenv()
 
-# Pick memory backend (in-memory, or persistent if CHAT_DB is set)
+# Pick memory backend (persistent SQLite by default, in-memory on failure)
 checkpointer = make_checkpointer()
 
 # Available models (Restricted to tool-compatible models for stability)
@@ -164,6 +165,41 @@ try:
     print(f"[extra tools loaded: {[t.name for t in EXTRA_TOOLS]}]")
 except Exception as e:
     print(f"[extra tools disabled: {e}]")
+
+
+# Short French labels for /help. Tools missing from this map fall back to the
+# first line of their docstring, so newly added tools still show up.
+_TOOL_LABELS = {
+    "where_am_i": "géolocalisation — ta position actuelle (ou celle fixée via /coords)",
+    "find_shelters": "abris à proximité — bunkers, parkings souterrains, métro, hôpitaux",
+    "find_supplies": "ravitaillement — pharmacies (iode), supermarchés, points d'eau",
+    "wind_forecast": "vent surface + altitude — direction des retombées (ex : « d'où vient le vent ici ? »)",
+    "radiation_here": "relevés de radiation en temps réel (capteurs IRSN Teleray)",
+    "strike_risk": "score de risque de ta zone selon les cibles stratégiques proches",
+    "nearby_nuclear_plants": "centrales nucléaires à proximité",
+    "strategic_sites": "sites stratégiques autour de toi (bases militaires, etc.)",
+    "emergency_broadcasts": "alertes et communiqués officiels",
+    "make_brief": "briefing d'urgence (Flash / Standard / Technique)",
+    "blast_map": "carte de l'explosion — rayons de souffle + retombées selon le vent "
+                 "(ex : « trace la carte d'une bombe de 150 kt sur Lyon »)",
+    "emergency_pdf": "rapport PDF hors-ligne de la situation",
+    "decontamination_and_radiation_health": "décontamination et symptômes d'irradiation",
+    "calming_exercise": "exercice de calme guidé — respiration 4-7-8, ancrage 5-4-3-2-1 "
+                        "(ex : « je panique, aide-moi à me calmer »)",
+}
+
+
+def skills_help():
+    """French bullet list of the skills the agent can call, built from the
+    actually registered `tools` so it never goes stale."""
+    lines = []
+    for t in tools:
+        label = _TOOL_LABELS.get(t.name)
+        if not label:
+            doc = (t.description or "").strip()
+            label = doc.splitlines()[0] if doc else ""
+        lines.append(f"• {t.name} — {label}" if label else f"• {t.name}")
+    return "\n".join(lines)
 
 def get_agent(model_key="qwen"):
     if model_key not in _agent_cache:
@@ -297,6 +333,8 @@ def print_help():
     print("  /reset             start a fresh conversation (forget history)")
     print("  /coords <lat> <lon>  set your location manually (skip IP lookup)")
     print("  quit / exit / salir  leave")
+    print("Skills the agent can use:")
+    print(skills_help())
 
 
 def run_cli():

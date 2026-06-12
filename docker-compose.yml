@@ -1,7 +1,7 @@
 # Ollama in Docker for the web chatbot.
 #
 # The Flask app runs on the HOST (python app.py) and reaches this container at
-# localhost:11434 — no app config needed. See WEBAPP.md for the full guide.
+# localhost:11434 — no app config needed. See docs/guide_installation.tex for the full guide.
 #
 #   docker compose up -d
 #   docker compose exec ollama ollama pull qwen2.5:3b   # pull a model INTO the container

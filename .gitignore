@@ -23,9 +23,10 @@ venv/
 __pycache__/
 *.pyc
 
-# Chat memory checkpoint (CHAT_DB)
+# Chat memory checkpoint auxiliary/backup files
+# (instance/checkpoint.db itself is versioned on purpose)
 *.db-*
-checkpoint.db
+*.corrupt-bak
 
 # Generated tool artifacts (maps, PDFs)
 instance/generated/

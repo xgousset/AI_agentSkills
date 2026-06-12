@@ -4,7 +4,7 @@ An autonomous agent for the **Gemini CLI** that delivers survival intelligence d
 
 The agent contract — tone, safety priority, data requirements, operational workflow — is defined in [`GEMINI.md`](./GEMINI.md). This repository implements that contract as a set of **23 specialized skills** under `.gemini/skills/`.
 
-> **Web chatbot (Flask + Ollama):** besides the Gemini CLI skills, this repo includes a local web chat that wraps the skills as tools and runs them through a local LLM. To install and run it (Linux/Windows, Ollama native or in Docker), see **[`WEBAPP.md`](./WEBAPP.md)**.
+> **Web chatbot (Flask + Ollama):** besides the Gemini CLI skills, this repo includes a local web chat (`app.py`) that wraps the skills as LangChain tools and runs them through a local LLM served by Ollama (default model `qwen2.5:3b`). Quick start: `pip install -r requirements.txt`, `ollama pull qwen2.5:3b`, then `python app.py` and open http://127.0.0.1:5001. A short setup & usage guide (in French) lives in [`docs/guide_installation.tex`](./docs/guide_installation.tex).
 
 ---
 
@@ -26,7 +26,17 @@ gemini            # opens the CLI with all 23 skills auto-loaded
 AI_agentSkills/
 ├── GEMINI.md                       # Agent system prompt + operational contract
 ├── README.md                       # This file
-├── plan.md                         # Audit & remediation plan
+├── docs/
+│   └── guide_installation.tex      # Setup & usage guide (French, LaTeX)
+├── app.py                          # Web chatbot — Flask server, routes, WebSocket
+├── emergency_chatbot.py            # Web chatbot — LangChain/LangGraph + Ollama orchestration
+├── extra_tools.py                  # Web chatbot — optional LangChain wrappers around skill scripts
+├── templates/                      # Web chatbot — chat UI (Jinja2)
+├── static/                         # Web chatbot — stylesheet
+├── LCEL.py                         # Standalone LangChain LCEL pipeline demo
+├── main_agent.py                   # Standalone LangChain agent demo
+├── requirements.txt                # Python dependencies (web chatbot)
+├── docker-compose.yml              # Optional: run Ollama in Docker (GPU-ready)
 ├── package.json                    # Node toolchain (used by api-auditor only)
 └── .gemini/
     └── skills/
@@ -63,12 +73,15 @@ Each skill folder may contain:
 - `references/` — long-form domain reference material.
 - `assets/` — static data (JSON, CSV).
 
+Generated locally and not meant to be versioned (gitignored): `.env` (runtime config), `NuclearAgent/` / `venv/` (local virtualenvs), `instance/` (chat memory DB + generated maps/PDFs), `run.bat` / `run.sh` (local launchers).
+
 ---
 
 ## Prerequisites
 
 - **Gemini CLI** — installed and authenticated.
-- **Python 3.9+** — used by most skills with executable scripts.
+- **Python 3.9+** — used by most skills with executable scripts (3.10+ for the web chatbot).
+- **Ollama** — only for the optional web chatbot (native install or via `docker-compose.yml`).
 - **Node.js 18+** — used by `api-auditor/scripts/audit.js` and by the three optional helpers `fallout-predictor/scripts/{geocoding,get_map,get_weather}.js` (see [`fallout-predictor/scripts/README.md`](./.gemini/skills/fallout-predictor/scripts/README.md)). The canonical Python pipeline still drives the skill; the JS scripts are convenience CLIs.
 - **Internet access** — the agent calls these public APIs (no keys required):
   - [Open-Meteo](https://open-meteo.com/) — multi-altitude wind data (`fallout-predictor`).
